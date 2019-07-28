@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DemoParser.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\DemoPacketParser.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\Entity.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\FastNetmessages\CVar.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\FastNetmessages\CVars.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\FastNetmessages\RankUpdate.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\FastNetmessages\SayText.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\FastNetmessages\SayText2.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\FastNetmessages\ServerRankUpdate.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\FastNetmessages\SetConVar.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\FastNetmessages\UserMessage.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\Handler\GameEventHandler.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\Handler\PacketEntitesHandler.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\Handler\PropDecoder.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\Handler\CreateStringTableUserInfoHandler.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\Handler\UpdateStringTableUserInfoHandler.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\IMessageParser.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DT\DataTableParser.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DT\SendTableProperty.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DT\SendTable.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DT\ServerClass.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\Events.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\Helper.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\Messages\netmessages.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\Messages\usermessages.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\Player.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\Program.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\Structs.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\ST\StringTableParser.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\Handler\UserMessageHandler.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\LimitStream.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\BitStream\BitArrayStream.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\BitStream\BitStreamUtil.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\BitStream\ManagedBitStream.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\BitStream\DebugBitStream.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\BitStream\IBitStream.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\BitStream\UnsafeBitStream.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\Messages\steammessages.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\Messages\gcmessages.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\FastNetmessages\NETTick.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\FastNetmessages\PacketEntities.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\FastNetmessages\GameEventList.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\FastNetmessages\GameEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\FastNetmessages\CreateStringTable.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\FastNetmessages\UpdateStringTable.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\DP\FastNetmessages\SendTable.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\Messages\EnumConstants.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\demoinfo\DemoInfo\AdditionalPlayerInformation.cs" />
+  </ItemGroup>
+</Project>
