@@ -1,0 +1,114 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DemoInfo\DemoInfo.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+    <PackageReference Include="protobuf-net" Version="2.4.0" />
+    <PackageReference Include="CommonServiceLocator" Version="2.0.4" />
+    <PackageReference Include="MvvmLightLibs" Version="5.4.1.1" />
+    <PackageReference Include="System.Drawing.Common" Version="4.5.1" />
+    <PackageReference Include="Microsoft.Win32.Registry" Version="4.5.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\..\external\csgo-demo-manager\Core\AppSettings.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Logger.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\DemoBasicData.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Language.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Map.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Agency.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Austria.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Biome.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Cache.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Canals.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Cbble.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Coast.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Cruise.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Dust2.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Empire.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Inferno.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Mikla.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Mirage.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\NewDust2.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\NewInferno.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\NewNuke.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Nuke.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Office.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Overpass.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Royal.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Santorini.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Season.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Train.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Tulip.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Vertigo.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\protobuf\GCMessages.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\protobuf\SteamMessages.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Serialization\EndReasonToStringConverter.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Serialization\LongListToStringListConverter.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Serialization\LongToStringConverter.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Serialization\SideToStringConverter.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Side.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Source\Esl.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Source\PugSetup.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Source\Wanmei.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Steam\VanityUrlResponse.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Stuff.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Maps\Subzero.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="..\..\external\csgo-demo-manager\Core\ShareCode.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Win32Utils.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Account.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Demo.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Events\BaseEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Events\BombDefusedEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Events\BombExplodedEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Events\BombPlantedEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Events\ClutchEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Events\DecoyEndedEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Events\DecoyStartedEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Events\EntryHoldKillEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Events\EntryKillEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Events\ExplosiveNadeExplodedEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Events\FlashbangExplodedEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Events\KillEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Events\MolotovFireEndedEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Events\MolotovFireStartedEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Events\NadeBaseEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Events\PlayerBlindedEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Events\PlayerHurtedEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Events\SmokeNadeEndedEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Events\SmokeNadeStartedEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Events\WeaponFireEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\HeatmapPoint.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\KillHeatmapPoint.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\MapPoint.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Overtime.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Player.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\PositionPoint.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Rank.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\RankInfo.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Round.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Serialization\DemoListBackupConverter.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Source\Cevo.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Source\Ebot.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Source\Esea.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Source\Faceit.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Source\PopFlash.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Source\Pov.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Source\Source.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Source\Valve.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Steam\PlayerBan.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Steam\PlayerSummary.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Suspect.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Team.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Weapon.cs" />
+  </ItemGroup>
+</Project>
