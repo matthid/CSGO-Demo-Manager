@@ -1,0 +1,160 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Core\Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+  
+    <PackageReference Include="CommonServiceLocator" version="2.0.4" />
+    <PackageReference Include="MvvmLightLibs" version="5.4.1.1" />
+    <PackageReference Include="Newtonsoft.Json" version="11.0.2" />
+    <PackageReference Include="NPOI" version="2.4.0" />
+    <PackageReference Include="protobuf-net" version="2.4.0" />
+    <PackageReference Include="SharpZipLib" version="1.1.0" />
+    <PackageReference Include="WriteableBitmapEx" version="1.5.1.0" />
+    <PackageReference Include="System.Drawing.Common" Version="4.5.1" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\AccountStatsService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Analyzer\CevoAnalyzer.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Analyzer\DemoAnalyzer.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Analyzer\EbotAnalyzer.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Analyzer\EseaAnalyzer.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Analyzer\PugSetupAnalyzer.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Analyzer\ValveAnalyzer.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\CacheService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\DamageService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\DemosService.cs" />
+    <!--Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\DrawService.cs" /-->
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\AbstractExport.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\ExcelService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\MultipleExport.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\AbstractMultipleSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\AbstractSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\AbstractSingleSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Multiple\FlashMatrixTeamsSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Multiple\GeneralSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Multiple\FlashMatrixPlayersSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Multiple\KillMatrixSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Multiple\KillsSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Multiple\MapsSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Multiple\PlayersSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Multiple\RoundsSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Multiple\TeamsSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Multiple\WeaponsSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Single\EnryKillsPlayerSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Single\EntryHoldKillsPlayerSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Single\EntryHoldKillsRoundSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Single\EntryHoldKillsTeamSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Single\EntryKillsRoundSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Single\EntryKillsTeamSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Single\FlashMatrixTeamsSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Single\FlashMatrixPlayersSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Single\GeneralSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Single\KillMatrixSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Single\KillsSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Single\PlayersSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\Sheets\Single\RoundsSheet.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Excel\SingleExport.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\FlashbangService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\GameLauncher.cs" />
+    <!--Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\HeatmapService.cs" /-->
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\KillService.cs" />
+    <!--Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Maps\MapService.cs" /-->
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Movie\FFmpegService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Movie\HlaeService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Movie\MovieService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\Movie\VirtualDubService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\PlayerService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\RoundService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\SoundService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\StuffService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\ThirdParties\CsgoDashStatsComService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\ThirdParties\CsgoDashStatsService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\ThirdParties\CsgoStatsService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\ThirdParties\ThirdPartiesServiceFactory.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Design\AccountStatsDesignService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Design\CacheDesignService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Design\DamageDesignService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Design\DemosDesignService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Design\FlashbangDesignService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Design\KillDesignService.cs" />
+    <!--Compile Include="..\..\external\csgo-demo-manager\Services\Design\MapDesignService.cs" /-->
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Design\PlayerDesignService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Design\RoundDesignService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Design\SteamDesignService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Design\StuffDesignService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Exceptions\Launcher\CsgoNotFoundException.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Exceptions\Launcher\HlaeNotFound.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Exceptions\Map\MapException.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Exceptions\Map\MapUnavailableException.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Extensions.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\FileOperationApiWrapper.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Interfaces\IAccountStatsService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Interfaces\ICacheService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Interfaces\IDamageService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Interfaces\IDemosService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Interfaces\IFlashbangService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Interfaces\IKillService.cs" />
+    <!--Compile Include="..\..\external\csgo-demo-manager\Services\Interfaces\IMapService.cs" /-->
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Interfaces\IPlayerService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Interfaces\IRoundService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Interfaces\ISteamService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Interfaces\IStuffService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Interfaces\IThirdPartyInterface.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Charts\CrouchKillDateChart.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Charts\DamageDateChart.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Charts\GenericDoubleChart.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Charts\HeadshotDateChart.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Charts\KillDateChart.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Charts\KillVelocityChart.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Charts\MapPercentageWinChart.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Charts\RankDateChart.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Charts\WinDateChart.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\DemoFilter.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Excel\PlayerStats.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Excel\WeaponsData.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\GameLauncherConfiguration.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\GitHub\LatestRelease.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Heatmap\HeatmapConfiguration.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Heatmap\HeatmapPointComparer.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Movie\MovieConfiguration.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Stats\FlashbangDataPoint.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Stats\KillDataPoint.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Stats\MapStats.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Stats\OverallStats.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Stats\PlayerRoundStats.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Stats\ProgressStats.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Stats\WeaponStats.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\ThirdParties\Responses\CsgoDashStatsResponse.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\ThirdParties\Responses\CsgostatsResponse.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\ThirdParties\ThirdPartyData.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Timelines\BombDefusedEventTimeline.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Timelines\BombExplodedEventTimeline.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Timelines\BombPlantedEventTimeline.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Timelines\DecoyThrownEventTimeline.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Timelines\EndTickEventMarkerTimeline.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Timelines\FlashThrownEventTimeline.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Timelines\HeThrownEventTimeline.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Timelines\IncendiaryThrownEventTimeline.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Timelines\KillEventTimeline.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Timelines\MolotovThrownEventTimeline.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Timelines\RoundEventTimeline.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Timelines\SmokeThrownEventTimeline.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Timelines\StartTickEventMarkerTimeline.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Timelines\StuffEventTimeline.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Models\Timelines\TimelineEvent.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Concrete\SteamService.cs" />
+    <Compile Include="..\..\external\csgo-demo-manager\Services\Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+</Project>
