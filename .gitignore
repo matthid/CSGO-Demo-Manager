@@ -14,3 +14,5 @@ release.sh
 *.DotSettings.user
 deploy
 .ionide/
+publish/Client
+publish/Server

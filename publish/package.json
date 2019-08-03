@@ -1,0 +1,13 @@
+{
+    "name": "csgo-demos-manager",
+    "version": "1.0.0",
+    "description": "CSGO Demos Manager is an application to manage replays from the game Counter-Strike: Global Offensive.",
+    "main": "main.js",
+    "scripts": {
+      "start": "electron ."
+    },
+    "repository": "https://github.com/matthid/CSGO-Demos-Manager",
+    "author": "GitHub",
+    "license": "MIT"
+  }
+  

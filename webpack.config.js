@@ -18,7 +18,6 @@ var CONFIG = {
     indexHtmlTemplate: './src/Client/index.html',
     fsharpEntry: './src/Client/Client.fsproj',
     cssEntry: './src/Client/style.scss',
-    outputDir: './src/Client/deploy',
     assetsDir: './src/Client/public',
     devServerPort: 8080,
     // When using webpack-dev-server, you may need to redirect some calls
@@ -63,21 +62,116 @@ var commonPlugins = [
     })
 ];
 
-module.exports = {
+// - fable-loader: transforms F# into JS
+// - babel-loader: transforms JS to old syntax (compatible with old browsers)
+// - sass-loaders: transforms SASS/SCSS into JS
+// - file-loader: Moves files referenced in the code (fonts, images) into output folder
+const module_rules = {
+    rules: [
+        {
+            test: /\.fs(x|proj)?$/,
+            use: {
+                loader: 'fable-loader',
+                options: {
+                    babel: CONFIG.babel
+                }
+            }
+        },
+        {
+            test: /\.js$/,
+            exclude: /node_modules/,
+            use: {
+                loader: 'babel-loader',
+                options: CONFIG.babel
+            },
+        },
+        {
+            test: /\.(sass|scss|css)$/,
+            use: [
+                isProduction
+                    ? MiniCssExtractPlugin.loader
+                    : 'style-loader',
+                'css-loader',
+                {
+                  loader: 'sass-loader',
+                  options: { implementation: require('sass') }
+                }
+            ],
+        },
+        {
+            test: /\.(png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)(\?.*)?$/,
+            use: ['file-loader']
+        }
+    ]
+};
+
+const electron_config = {
     // In development, split the JavaScript and CSS files in order to
     // have a faster HMR support. In production bundle styles together
     // with the code because the MiniCssExtractPlugin will extract the
     // CSS in a separate files.
     entry: isProduction ? {
-        app: [resolve(CONFIG.fsharpEntry), resolve(CONFIG.cssEntry)]
+        app: [resolve('./src/Client/target.electron.js'), resolve(CONFIG.fsharpEntry), resolve(CONFIG.cssEntry)]
     } : {
-            app: [resolve(CONFIG.fsharpEntry)],
+            app: [resolve('./src/Client/target.electron.js'), resolve(CONFIG.fsharpEntry)],
+            style: [resolve(CONFIG.cssEntry)]
+        },
+    target: 'electron-renderer',
+    // Add a hash to the output file name in production
+    // to prevent browser caching if code changes
+    output: {
+        path: resolve('./publish/Client'),
+        filename: isProduction ? '[name].[hash].js' : '[name].js'
+    },
+    mode: isProduction ? 'production' : 'development',
+    devtool: isProduction ? 'source-map' : 'eval-source-map',
+    optimization: {
+        splitChunks: {
+            chunks: 'all'
+        },
+    },
+    // Besides the HtmlPlugin, we use the following plugins:
+    // PRODUCTION
+    //      - MiniCssExtractPlugin: Extracts CSS from bundle to a different file
+    //          To minify CSS, see https://github.com/webpack-contrib/mini-css-extract-plugin#minimizing-for-production    
+    //      - CopyWebpackPlugin: Copies static assets to output directory
+    // DEVELOPMENT
+    //      - HotModuleReplacementPlugin: Enables hot reloading when code changes without refreshing
+    plugins: isProduction ?
+        commonPlugins.concat([
+            new MiniCssExtractPlugin({ filename: 'style.[hash].css' }),
+            new CopyWebpackPlugin([{ from: resolve(CONFIG.assetsDir) }]),
+        ])
+        : commonPlugins.concat([
+            new webpack.HotModuleReplacementPlugin(),
+        ]),
+    resolve: {
+        // See https://github.com/fable-compiler/Fable/issues/1490
+        symlinks: false
+    },
+    module: module_rules,
+    
+    node: {
+        process: false
+    }
+};
+
+
+const client_config = {
+    // In development, split the JavaScript and CSS files in order to
+    // have a faster HMR support. In production bundle styles together
+    // with the code because the MiniCssExtractPlugin will extract the
+    // CSS in a separate files.
+    entry: isProduction ? {
+        app: [resolve('./src/Client/target.web.js'), resolve(CONFIG.fsharpEntry), resolve(CONFIG.cssEntry)]
+    } : {
+            app: [resolve('./src/Client/target.web.js'), resolve(CONFIG.fsharpEntry)],
             style: [resolve(CONFIG.cssEntry)]
         },
     // Add a hash to the output file name in production
     // to prevent browser caching if code changes
     output: {
-        path: resolve(CONFIG.outputDir),
+        path: resolve('./src/Client/deploy'),
         filename: isProduction ? '[name].[hash].js' : '[name].js'
     },
     mode: isProduction ? 'production' : 'development',
@@ -109,56 +203,23 @@ module.exports = {
     // Configuration for webpack-dev-server
     devServer: {
         publicPath: '/',
-        contentBase: resolve(CONFIG.assetsDir),
+        contentBase: resolve('./src/Client/deploy'),
+        //contentBase: resolve(CONFIG.assetsDir),
         host: '0.0.0.0',
         port: CONFIG.devServerPort,
         proxy: CONFIG.devServerProxy,
         hot: true,
         inline: true
     },
-    // - fable-loader: transforms F# into JS
-    // - babel-loader: transforms JS to old syntax (compatible with old browsers)
-    // - sass-loaders: transforms SASS/SCSS into JS
-    // - file-loader: Moves files referenced in the code (fonts, images) into output folder
-    module: {
-        rules: [
-            {
-                test: /\.fs(x|proj)?$/,
-                use: {
-                    loader: 'fable-loader',
-                    options: {
-                        babel: CONFIG.babel
-                    }
-                }
-            },
-            {
-                test: /\.js$/,
-                exclude: /node_modules/,
-                use: {
-                    loader: 'babel-loader',
-                    options: CONFIG.babel
-                },
-            },
-            {
-                test: /\.(sass|scss|css)$/,
-                use: [
-                    isProduction
-                        ? MiniCssExtractPlugin.loader
-                        : 'style-loader',
-                    'css-loader',
-                    {
-                      loader: 'sass-loader',
-                      options: { implementation: require('sass') }
-                    }
-                ],
-            },
-            {
-                test: /\.(png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)(\?.*)?$/,
-                use: ['file-loader']
-            }
-        ]
+    module: module_rules,
+    
+    node: {
+        process: false
     }
 };
+
+// First one is used by webpack-dev-server
+module.exports = [ client_config, electron_config ]
 
 function resolve(filePath) {
     return path.isAbsolute(filePath) ? filePath : path.join(__dirname, filePath);

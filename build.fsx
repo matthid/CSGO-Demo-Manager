@@ -14,9 +14,10 @@ open Fake.IO
 
 Target.initEnvironment ()
 
-let serverPath = Path.getFullName "./src/Server"
+let serverPath = Path.getFullName "./src/CSGO-Demo-Backend"
 let clientPath = Path.getFullName "./src/Client"
-let clientDeployPath = Path.combine clientPath "deploy"
+let publishPath = Path.getFullName "./publish"
+let clientDeployPath = Path.combine publishPath "Client"
 let deployDir = Path.getFullName "./deploy"
 
 let release = ReleaseNotes.load "RELEASE_NOTES.md"

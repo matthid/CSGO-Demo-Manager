@@ -1,5 +1,9 @@
 {
     "private": true,
+    "scripts": {
+      "electron": "cd publish && electron .",
+      "webpack": "cd src/Client && webpack  --progress --profile"
+    },
     "devDependencies": {
         "@babel/core": "^7.4.4",
         "@babel/plugin-transform-runtime": "^7.4.4",
@@ -12,6 +16,7 @@
         "copy-webpack-plugin": "^4.6.0",
         "core-js": "^3.0.1",
         "css-loader": "^2.0.1",
+        "electron": "^6.0.0",
         "fable-compiler": "^2.3.3",
         "fable-loader": "^2.1.6",
         "file-loader": "^4.0.0",
