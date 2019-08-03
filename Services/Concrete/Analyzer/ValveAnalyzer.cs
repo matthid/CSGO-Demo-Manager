@@ -152,6 +152,8 @@ namespace Services.Concrete.Analyzer
 							Demo.Players.Add(pl);
 							pl.TeamName = pl.Side == Side.CounterTerrorist ? Demo.TeamCT.Name : Demo.TeamT.Name;
 						});
+
+                        pl.EnableUpdates();
 					}
 				}
 			}
@@ -419,6 +421,8 @@ namespace Services.Concrete.Analyzer
 							}
 						});
 					}
+
+                    pl.EnableUpdates();
 				}
 			}
 
