@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -9,7 +9,6 @@
   <ItemGroup>
   
     <PackageReference Include="CommonServiceLocator" version="2.0.4" />
-    <PackageReference Include="MvvmLightLibs" version="5.4.1.1" />
     <PackageReference Include="Newtonsoft.Json" version="11.0.2" />
     <PackageReference Include="NPOI" version="2.4.0" />
     <PackageReference Include="protobuf-net" version="2.4.0" />
