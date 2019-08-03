@@ -167,19 +167,19 @@ let ofKillEvent (ev:CSKillEvent) : FSKillEvent =
         // Others
         KillerSteamId = ev.KillerSteamId |> ofSteamId
         KilledSteamId = ev.KilledSteamId |> ofSteamId
-        AssisterSteamId = ev.AssisterSteamId |> ofSteamId
+        AssisterSteamId = if ev.AssisterSteamId = 0L then None else ev.AssisterSteamId |> ofSteamId |> Some
         Weapon = ev.Weapon |> ofWeapon
         //[JsonProperty("heatmap_point")] public KillHeatmapPoint Point
         //[JsonProperty("killer_vel_x")] public float KillerVelocityX
         //[JsonProperty("killer_vel_y")] public float KillerVelocityY
         //[JsonProperty("killer_vel_z")] public float KillerVelocityZ
         KillerSide = ev.KillerSide |> ofSide
-        KillerTeam = ev.KillerTeam
+        KillerTeam = ev.KillerTeam |> Option.ofObj
         KilledSide = ev.KilledSide |> ofSide
-        KilledTeam = ev.KilledTeam
+        KilledTeam = ev.KilledTeam |> Option.ofObj
         KillerName = ev.KillerName
         KilledName = ev.KilledName
-        AssisterName = ev.AssisterName
+        AssisterName = ev.AssisterName |> Option.ofObj
         RoundNumber = ev.RoundNumber
         /// <summary>
         /// Number of seconds elapsed since the freezetime end

@@ -13,7 +13,19 @@ open Shared
 open Services.Interfaces
 open Services.Concrete.Excel
 open Services.Concrete
+open System.Collections.Generic
 
+type IMyDemoService =
+    abstract member Cache : Async<IReadOnlyCollection<Core.Models.Demo>> with get
+type MyDemoService(cache : ICacheService) =
+    let demos = cache.GetDemoListAsync()
+    interface IMyDemoService with
+        member x.Cache
+            with get () =
+                async {
+                    let! de = demos |> Async.AwaitTask
+                    return de :> IReadOnlyCollection<_>
+                }
 
 let tryGetEnv = System.Environment.GetEnvironmentVariable >> function null | "" -> None | x -> Some x
 
@@ -35,9 +47,9 @@ let webApp =
     route "/api/init" >=>
         fun next ctx ->
             task {
-                let cache = ctx.GetService<ICacheService>()
-                let! demos = cache.GetDemoListAsync() |> Async.AwaitTask
-                let counter = { Demos = demos |> Seq.map ConvertToShared.ofDemo |> List.ofSeq }
+                let cache = ctx.GetService<IMyDemoService>()
+                let! demos = cache.Cache
+                let counter = { Demos = demos |> Seq.take 50 |> Seq.map ConvertToShared.ofDemo |> List.ofSeq }
                 return! json counter next ctx
             }
 
@@ -60,6 +72,7 @@ let configureServices (services : IServiceCollection) =
     services.AddSingleton<IDamageService, DamageService>() |> ignore<IServiceCollection>
     services.AddSingleton<IStuffService, StuffService>()|> ignore<IServiceCollection>
     services.AddSingleton<IAccountStatsService, AccountStatsService>() |> ignore<IServiceCollection>
+    services.AddSingleton<IMyDemoService, MyDemoService>() |> ignore<IServiceCollection>
     //services.AddSingleton<IMapService, MapService>();
     //services.AddSingleton<IDialogService, DialogService>();
 
@@ -77,6 +90,8 @@ let host =
         .Build()
 
 host.StartAsync().GetAwaiter().GetResult()
+// Start to build demo cache
+host.Services.GetService<IMyDemoService>() |> ignore<IMyDemoService>
 
 printfn "Started server, write 'exit<Enter>' to stop the server"
 let mutable hasExited = false

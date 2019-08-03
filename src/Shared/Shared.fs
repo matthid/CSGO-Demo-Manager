@@ -136,19 +136,19 @@ type KillEvent = {
     // Others
     KillerSteamId: SteamId // [JsonProperty("killer_steamid")] [JsonConverter(typeof(LongToStringConverter))] public long KillerSteamId { get; set; }
     KilledSteamId : SteamId // [JsonProperty("killed_steamid")][JsonConverter(typeof(LongToStringConverter))] public long KilledSteamId { get; set; }
-    AssisterSteamId : SteamId // [JsonProperty("assister_steamid")] [JsonConverter(typeof(LongToStringConverter))] public long AssisterSteamId { get; set; }
+    AssisterSteamId : SteamId option // [JsonProperty("assister_steamid")] [JsonConverter(typeof(LongToStringConverter))] public long AssisterSteamId { get; set; }
     Weapon : Weapon // [JsonProperty("weapon")] public Weapon Weapon { get; set; }
     //[JsonProperty("heatmap_point")] public KillHeatmapPoint Point { get; set; }
     //[JsonProperty("killer_vel_x")] public float KillerVelocityX { get; set; }
     //[JsonProperty("killer_vel_y")] public float KillerVelocityY { get; set; }
     //[JsonProperty("killer_vel_z")] public float KillerVelocityZ { get; set; }
     KillerSide : Side // [JsonProperty("killer_side")] [JsonConverter(typeof(SideToStringConverter))] public Side KillerSide { get; set; }
-    KillerTeam : string // [JsonProperty("killer_team")] public string KillerTeam { get; set; }
+    KillerTeam : string option // [JsonProperty("killer_team")] public string KillerTeam { get; set; }
     KilledSide : Side // [JsonProperty("killed_side")] [JsonConverter(typeof(SideToStringConverter))] public Side KilledSide { get; set; }
-    KilledTeam : string // [JsonProperty("killed_team")] public string KilledTeam { get; set; }
+    KilledTeam : string option // [JsonProperty("killed_team")] public string KilledTeam { get; set; }
     KillerName : string // [JsonProperty("killer_name")] public string KillerName { get; set; }
     KilledName : string // [JsonProperty("killed_name")] public string KilledName { get; set; }
-    AssisterName : string // [JsonProperty("assister_name")] public string AssisterName { get; set; }
+    AssisterName : string option // [JsonProperty("assister_name")] public string AssisterName { get; set; }
     RoundNumber : int // [JsonProperty("round_number")] public int RoundNumber { get; set; }
     /// <summary>
     /// Number of seconds elapsed since the freezetime end

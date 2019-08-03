@@ -12,7 +12,11 @@
     <ItemGroup>
         <None Include="paket.references" />
         <Compile Include="..\Shared\Shared.fs" />
+        <Compile Include="Thoth_Utils.fs" />
+        <Compile Include="Thoth_Encode.fs" />
+        <Compile Include="Thoth_Json_Giraffe.fs" />
         <Compile Include="ConvertToShared.fs" />
+        <None Include="Test.fsx" />
         <Compile Include="Server.fs" />
     </ItemGroup>
     <Import Project="..\..\.paket\Paket.Restore.targets" />
