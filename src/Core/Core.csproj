@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -110,6 +110,30 @@
     <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Suspect.cs" Link="Models\Suspect.cs" />
     <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Team.cs" Link="Models\Team.cs" />
     <Compile Include="..\..\external\csgo-demo-manager\Core\Models\Weapon.cs" Link="Models\Weapon.cs" />
+  </ItemGroup>
+  <ItemGroup>
+        <EmbeddedResource Include="..\..\external\csgo-demo-manager\Core\Properties\Resources.ar.resx" Link="Properties\Resources.ar.resx"  />
+        <EmbeddedResource Include="..\..\external\csgo-demo-manager\Core\Properties\Resources.da.resx" Link="Properties\Resources.da.resx"  />
+        <EmbeddedResource Include="..\..\external\csgo-demo-manager\Core\Properties\Resources.de.resx" Link="Properties\Resources.de.resx" />
+        <EmbeddedResource Include="..\..\external\csgo-demo-manager\Core\Properties\Resources.es.resx" Link="Properties\Resources.es.resx" />
+        <EmbeddedResource Include="..\..\external\csgo-demo-manager\Core\Properties\Resources.fr.resx" Link="Properties\Resources.fr.resx" />
+        <EmbeddedResource Include="..\..\external\csgo-demo-manager\Core\Properties\Resources.hr.resx" Link="Properties\Resources.hr.resx" />
+        <EmbeddedResource Include="..\..\external\csgo-demo-manager\Core\Properties\Resources.hu.resx" Link="Properties\Resources.hu.resx" />
+        <EmbeddedResource Include="..\..\external\csgo-demo-manager\Core\Properties\Resources.it.resx" Link="Properties\Resources.it.resx" />
+        <EmbeddedResource Include="..\..\external\csgo-demo-manager\Core\Properties\Resources.ja.resx" Link="Properties\Resources.ja.resx" />
+        <EmbeddedResource Include="..\..\external\csgo-demo-manager\Core\Properties\Resources.pl.resx" Link="Properties\Resources.pl.resx" />
+        <EmbeddedResource Include="..\..\external\csgo-demo-manager\Core\Properties\Resources.pt-BR.resx" Link="Properties\Resources.pt-BR.resx" />
+        <EmbeddedResource Include="..\..\external\csgo-demo-manager\Core\Properties\Resources.pt.resx" Link="Properties\Resources.pt.resx" />
+        <EmbeddedResource Include="..\..\external\csgo-demo-manager\Core\Properties\Resources.resx" Link="Properties\Resources.resx" >
+            <Generator>ResXFileCodeGenerator</Generator>
+            <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+            <SubType>Designer</SubType>
+        </EmbeddedResource>
+        <EmbeddedResource Include="..\..\external\csgo-demo-manager\Core\Properties\Resources.ru.resx" Link="Properties\Resources.ru.resx" />
+        <EmbeddedResource Include="..\..\external\csgo-demo-manager\Core\Properties\Resources.sr-Cyrl.resx" Link="Properties\Resources.sr-Cyrl.resx"  />
+        <EmbeddedResource Include="..\..\external\csgo-demo-manager\Core\Properties\Resources.tr.resx" Link="Properties\Resources.tr.resx"  />
+        <EmbeddedResource Include="..\..\external\csgo-demo-manager\Core\Properties\Resources.zh-Hans.resx" Link="Properties\Resources.zh-Hans.resx"  />
+        <EmbeddedResource Include="..\..\external\csgo-demo-manager\Core\Properties\Resources.zh-Hant.resx" Link="Properties\Resources.zh-Hant.resx"  />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Models\Maps\" />

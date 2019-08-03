@@ -49,8 +49,9 @@ var CONFIG = {
     }
 }
 
+var isDevServer = process.argv.find(v => v.indexOf('webpack-dev-server') !== -1);
 // If we're running the webpack-dev-server, assume we're in development mode
-var isProduction = !process.argv.find(v => v.indexOf('webpack-dev-server') !== -1);
+var isProduction = !isDevServer;
 console.log('Bundling for ' + (isProduction ? 'production' : 'development') + '...');
 
 // The HtmlWebpackPlugin allows us to use a template for the index.html page
@@ -203,7 +204,7 @@ const client_config = {
     // Configuration for webpack-dev-server
     devServer: {
         publicPath: '/',
-        contentBase: resolve('./src/Client/deploy'),
+        //contentBase: resolve('./src/Client/deploy'),
         //contentBase: resolve(CONFIG.assetsDir),
         host: '0.0.0.0',
         port: CONFIG.devServerPort,
@@ -219,7 +220,7 @@ const client_config = {
 };
 
 // First one is used by webpack-dev-server
-module.exports = [ client_config, electron_config ]
+module.exports = isDevServer ? client_config : [ client_config, electron_config ];
 
 function resolve(filePath) {
     return path.isAbsolute(filePath) ? filePath : path.join(__dirname, filePath);

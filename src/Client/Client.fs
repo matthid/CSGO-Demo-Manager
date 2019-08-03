@@ -15,37 +15,31 @@ open Shared
 // in this case, we are keeping track of a counter
 // we mark it as optional, because initially it will not be available from the client
 // the initial value will be requested from server
-type Model = { Counter: Counter option }
+type Model = {
+    LoadingData : bool
+    CurrentData: Demo list }
 
 // The Msg type defines what events/actions can occur while the application is running
 // the state of the application changes *only* in reaction to these events
 type Msg =
-| Increment
-| Decrement
-| InitialCountLoaded of Counter
+| InitialDataLoaded of InitData
 
-let initialCounter () = Fetch.fetchAs<Counter> (Backend.getUrl "/api/init")
 
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
-    let initialModel = { Counter = None }
+    let initialModel = { CurrentData = []; LoadingData = true }
+    let initialData () = Fetch.fetchAs<InitData> (Backend.getUrl "/api/init")
     let loadCountCmd =
-        Cmd.OfPromise.perform initialCounter () InitialCountLoaded
+        Cmd.OfPromise.perform initialData () InitialDataLoaded
     initialModel, loadCountCmd
 
 // The update function computes the next state of the application based on the current state and the incoming events/messages
 // It can also run side-effects (encoded as commands) like calling the server via Http.
 // these commands in turn, can dispatch messages to which the update function will react.
 let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
-    match currentModel.Counter, msg with
-    | Some counter, Increment ->
-        let nextModel = { currentModel with Counter = Some { Value = counter.Value + 1 } }
-        nextModel, Cmd.none
-    | Some counter, Decrement ->
-        let nextModel = { currentModel with Counter = Some { Value = counter.Value - 1 } }
-        nextModel, Cmd.none
-    | _, InitialCountLoaded initialCount->
-        let nextModel = { Counter = Some initialCount }
+    match msg with
+    | InitialDataLoaded initialData ->
+        let nextModel = { currentModel with CurrentData = initialData.Demos; LoadingData = false }
         nextModel, Cmd.none
     | _ -> currentModel, Cmd.none
 
@@ -73,9 +67,8 @@ let safeComponents =
           str " powered by: "
           components ]
 
-let show = function
-| { Counter = Some counter } -> string counter.Value
-| { Counter = None   } -> "Loading..."
+let showDemos (model:Model) =
+    str (sprintf "%d Demos" model.CurrentData.Length)
 
 let button txt onClick =
     Button.button
@@ -85,18 +78,18 @@ let button txt onClick =
         [ str txt ]
 
 let view (model : Model) (dispatch : Msg -> unit) =
+    let inner =
+        if model.LoadingData then
+            str "Loading ..."
+        else showDemos model
+    
     div []
         [ Navbar.navbar [ Navbar.Color IsPrimary ]
             [ Navbar.Item.div [ ]
                 [ Heading.h2 [ ]
                     [ str "SAFE Template" ] ] ]
 
-          Container.container []
-              [ Content.content [ Content.Modifiers [ Modifier.TextAlignment (Screen.All, TextAlignment.Centered) ] ]
-                    [ Heading.h3 [] [ str ("Press buttons to manipulate counter: " + show model) ] ]
-                Columns.columns []
-                    [ Column.column [] [ button "-" (fun _ -> dispatch Decrement) ]
-                      Column.column [] [ button "+" (fun _ -> dispatch Increment) ] ] ]
+          inner
 
           Footer.footer [ ]
                 [ Content.content [ Content.Modifiers [ Modifier.TextAlignment (Screen.All, TextAlignment.Centered) ] ]

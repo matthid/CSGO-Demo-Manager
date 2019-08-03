@@ -10,6 +10,9 @@ open Microsoft.Extensions.DependencyInjection
 open FSharp.Control.Tasks.V2
 open Giraffe
 open Shared
+open Services.Interfaces
+open Services.Concrete.Excel
+open Services.Concrete
 
 
 let tryGetEnv = System.Environment.GetEnvironmentVariable >> function null | "" -> None | x -> Some x
@@ -32,7 +35,9 @@ let webApp =
     route "/api/init" >=>
         fun next ctx ->
             task {
-                let counter = { Value = 42 }
+                let cache = ctx.GetService<ICacheService>()
+                let! demos = cache.GetDemoListAsync() |> Async.AwaitTask
+                let counter = { Demos = demos |> Seq.map ConvertToShared.ofDemo |> List.ofSeq }
                 return! json counter next ctx
             }
 
@@ -42,6 +47,22 @@ let configureApp (app : IApplicationBuilder) =
        .UseGiraffe webApp
 
 let configureServices (services : IServiceCollection) =
+
+    // Create run time view services and models
+    services.AddSingleton<IDemosService, DemosService>() |> ignore<IServiceCollection>
+    services.AddSingleton<ISteamService, SteamService>() |> ignore<IServiceCollection>
+    services.AddSingleton<ICacheService, CacheService>() |> ignore<IServiceCollection>
+    services.AddSingleton<ExcelService, ExcelService>() |> ignore<IServiceCollection>
+    services.AddSingleton<IFlashbangService, FlashbangService>() |> ignore<IServiceCollection>
+    services.AddSingleton<IKillService, KillService>() |> ignore<IServiceCollection>
+    services.AddSingleton<IRoundService, RoundService>() |> ignore<IServiceCollection>
+    services.AddSingleton<IPlayerService, PlayerService>() |> ignore<IServiceCollection>
+    services.AddSingleton<IDamageService, DamageService>() |> ignore<IServiceCollection>
+    services.AddSingleton<IStuffService, StuffService>()|> ignore<IServiceCollection>
+    services.AddSingleton<IAccountStatsService, AccountStatsService>() |> ignore<IServiceCollection>
+    //services.AddSingleton<IMapService, MapService>();
+    //services.AddSingleton<IDialogService, DialogService>();
+
     services.AddGiraffe() |> ignore
     services.AddSingleton<Giraffe.Serialization.Json.IJsonSerializer>(Thoth.Json.Giraffe.ThothSerializer()) |> ignore
 
