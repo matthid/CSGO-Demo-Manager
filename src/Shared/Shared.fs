@@ -683,3 +683,6 @@ type Demo = {
 type DemoData =
     { Demos : Demo list
       Pages : int }
+
+type StartMMDownloadResult =
+    { Status : string }
