@@ -1,8 +1,8 @@
 {
     "private": true,
     "scripts": {
-      "electron": "cd publish && electron .",
-      "webpack": "cd src/Client && webpack  --progress --profile"
+        "electron": "cd publish && electron .",
+        "webpack": "cd src/Client && webpack  --progress --profile"
     },
     "devDependencies": {
         "@babel/core": "^7.4.4",
@@ -25,6 +25,7 @@
         "open-sans-fonts": "^1.5.1",
         "react": "16.5.2",
         "react-dom": "16.5.2",
+        "react-table": "^6.10.0",
         "remotedev": "^0.2.9",
         "sass": "^1.15.2",
         "sass-loader": "^7.1.0",

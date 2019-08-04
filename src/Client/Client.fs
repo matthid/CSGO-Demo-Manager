@@ -17,18 +17,24 @@ open Shared
 // the initial value will be requested from server
 type Model = {
     LoadingData : bool
+    Pages : int
     CurrentData: Demo list }
 
 // The Msg type defines what events/actions can occur while the application is running
 // the state of the application changes *only* in reaction to these events
 type Msg =
-| InitialDataLoaded of InitData
+| LoadingData
+| NewData of DemoData
+| InitialDataLoaded of DemoData
 
+let fetchDemos (startItem:int) (maxItems:int) =
+    let url = sprintf "/api/demos?startItem=%d&maxItems=%d" startItem maxItems
+    Fetch.fetchAs<DemoData> (Backend.getUrl url)
 
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
-    let initialModel = { CurrentData = []; LoadingData = true }
-    let initialData () = Fetch.fetchAs<InitData> (Backend.getUrl "/api/init")
+    let initialModel = { CurrentData = []; LoadingData = true; Pages = 1 }
+    let initialData () = fetchDemos 0 50
     let loadCountCmd =
         Cmd.OfPromise.perform initialData () InitialDataLoaded
     initialModel, loadCountCmd
@@ -39,7 +45,13 @@ let init () : Model * Cmd<Msg> =
 let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     match msg with
     | InitialDataLoaded initialData ->
-        let nextModel = { currentModel with CurrentData = initialData.Demos; LoadingData = false }
+        let nextModel = { currentModel with CurrentData = initialData.Demos; LoadingData = false; Pages = initialData.Pages }
+        nextModel, Cmd.none
+    | LoadingData ->
+        let nextModel = { currentModel with LoadingData = true }
+        nextModel, Cmd.none
+    | NewData data ->
+        let nextModel = { currentModel with CurrentData = data.Demos; LoadingData = false; Pages = data.Pages }
         nextModel, Cmd.none
     | _ -> currentModel, Cmd.none
 
@@ -67,8 +79,58 @@ let safeComponents =
           str " powered by: "
           components ]
 
-let showDemos (model:Model) =
-    str (sprintf "%d Demos" model.CurrentData.Length)
+let demoView (demo:Demo) =
+    ReactTable.table
+open Fable.Core
+open Fable.Core.JsInterop
+let inline (~%) x = createObj x
+let inline (=>) k v = k ==> v
+    
+type Person =
+    { name: string; age: int; friend: Person option }
+    
+let data =
+    [| { name = "Tanner Linsley"
+         age = 26
+         friend = Some { name = "Jason Maurer"
+                         age = 23
+                         friend = None } } |]
+    |> ResizeArray
+
+let columns =
+    let c1 = createEmpty<ReactTable.Column<Demo, string>>
+    c1.Header <- Some (ReactTable.TableCellRenderer.ofReactElement <| str "Name")
+    c1.id <- Some "Name"
+    c1.accessor <- Some (ReactTable.Accessor.ofAccessorFunction (fun d -> Some d.Name))
+    let c2 = createEmpty<ReactTable.Column<Demo, string>>
+    c2.Header <- Some (ReactTable.TableCellRenderer.ofReactElement <| str "Comment")
+    c2.accessor <- Some (ReactTable.Accessor.ofAccessorFunction (fun d -> Some d.Comment))
+    c2.id <- Some "Comment"
+    c2.Cell <- Some (ReactTable.TableCellRenderer.ofCase1 (fun info -> span [] [str (string info.value)]))
+    let c3 = createEmpty<ReactTable.Column<Demo, string>>
+    c3.Header <- Some (ReactTable.TableCellRenderer.ofReactElement <| str "Map")
+    c3.id <- Some "Map"
+    c3.accessor <- Some (ReactTable.Accessor.ofAccessorFunction (fun d -> Some d.MapName))
+    [|c1 :?> ReactTable.Column<Demo> ; c2 :?> _; c3 :?> _|]
+
+let demosView (model:Model) dispatch =
+    let p = createEmpty<ReactTable.TableProps<Demo, Demo>>
+    p.data <- model.CurrentData |> ResizeArray
+    p.columns <- Some columns
+    p.loading <- model.LoadingData
+    p.pages <- Some (float model.Pages)
+    p.manual <- true
+    p.onFetchData <- (fun state instance ->
+        async {
+            dispatch(LoadingData)
+            let! demos = fetchDemos (int state.pageSize * int state.page) (int state.pageSize) |> Async.AwaitPromise
+            dispatch(NewData demos)
+        }
+        |> Async.StartImmediate
+
+    )
+    ReactTable.table p
+    //str (sprintf "%d Demos" model.CurrentData.Length)
 
 let button txt onClick =
     Button.button
@@ -79,15 +141,13 @@ let button txt onClick =
 
 let view (model : Model) (dispatch : Msg -> unit) =
     let inner =
-        if model.LoadingData then
-            str "Loading ..."
-        else showDemos model
+        demosView model dispatch
     
     div []
         [ Navbar.navbar [ Navbar.Color IsPrimary ]
             [ Navbar.Item.div [ ]
                 [ Heading.h2 [ ]
-                    [ str "SAFE Template" ] ] ]
+                    [ str "CSGO Demo Manager" ] ] ]
 
           inner
 

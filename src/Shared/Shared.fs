@@ -680,5 +680,6 @@ type Demo = {
     //[JsonProperty("chat_messages")]    public List<string> ChatMessageList
 }
 
-type InitData =
-    { Demos : Demo list }
+type DemoData =
+    { Demos : Demo list
+      Pages : int }

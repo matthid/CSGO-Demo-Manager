@@ -43,14 +43,47 @@ let port =
     "SERVER_PORT"
     |> tryGetEnv |> Option.map uint16 |> Option.defaultValue 8085us
 
+module Seq =
+    let tryTake (n : int) (s : _ seq) =
+        seq {
+            use e = s.GetEnumerator ()
+            let mutable i = 0
+            while e.MoveNext () && i < n do
+                i <- i + 1
+                yield e.Current
+        }
+    let trySkip (n : int) (s : _ seq) =
+        seq {
+            use e = s.GetEnumerator ()
+            let mutable i = 0
+            let mutable dataAvailable = e.MoveNext ()
+            while dataAvailable && i < n do
+                dataAvailable <- e.MoveNext ()
+                i <- i + 1
+            if dataAvailable then
+                yield e.Current
+                while e.MoveNext () do
+                    yield e.Current
+        }
+
+
 let webApp =
-    route "/api/init" >=>
+    route "/api/demos" >=>
         fun next ctx ->
             task {
+                let startItem =
+                    let t = ctx.Request.Query.["startItem"]
+                    if t.Count > 0 then Int32.Parse t.[0] else 0
+                let maxItems =
+                    let t = ctx.Request.Query.["maxItems"]
+                    if t.Count > 0 then Int32.Parse t.[0] else 50
                 let cache = ctx.GetService<IMyDemoService>()
                 let! demos = cache.Cache
-                let counter = { Demos = demos |> Seq.take 50 |> Seq.map ConvertToShared.ofDemo |> List.ofSeq }
-                return! json counter next ctx
+                printfn "Have %d demos, skipping %d and taking %d" demos.Count startItem maxItems
+                let demoData =
+                    { Demos = demos |> Seq.trySkip startItem |> Seq.tryTake maxItems |> Seq.map ConvertToShared.ofDemo |> List.ofSeq
+                      Pages = demos.Count / maxItems + (if demos.Count % maxItems = 0 then 0 else 1) }
+                return! json demoData next ctx
             }
 
 let configureApp (app : IApplicationBuilder) =
