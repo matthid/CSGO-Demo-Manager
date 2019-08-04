@@ -67,38 +67,46 @@ module Seq =
         }
 
 let webApp =
-    route "/api/demos" >=>
-        fun next ctx ->
-            task {
-                let startItem =
-                    let t = ctx.Request.Query.["startItem"]
-                    if t.Count > 0 then Int32.Parse t.[0] else 0
-                let maxItems =
-                    let t = ctx.Request.Query.["maxItems"]
-                    if t.Count > 0 then Int32.Parse t.[0] else 50
-                let sortBy =
-                    let t = ctx.Request.Query.["sortBy"]
-                    if t.Count > 0 then t.[0] else "Date"
-                let desc =
-                    let t = ctx.Request.Query.["desc"]
-                    if t.Count > 0 then bool.Parse t.[0] else true
+    choose [
+        route "/api/downloadMM" >=>
+            fun next ctx ->
+                task {
+                    let r = { Status = "Ok" }
+                    return! json r next ctx
+                }
+        route "/api/demos" >=>
+            fun next ctx ->
+                task {
+                    let startItem =
+                        let t = ctx.Request.Query.["startItem"]
+                        if t.Count > 0 then Int32.Parse t.[0] else 0
+                    let maxItems =
+                        let t = ctx.Request.Query.["maxItems"]
+                        if t.Count > 0 then Int32.Parse t.[0] else 50
+                    let sortBy =
+                        let t = ctx.Request.Query.["sortBy"]
+                        if t.Count > 0 then t.[0] else "Date"
+                    let desc =
+                        let t = ctx.Request.Query.["desc"]
+                        if t.Count > 0 then bool.Parse t.[0] else true
 
-                let cache = ctx.GetService<IMyDemoService>()
-                let! demos = cache.Cache
-                let sortFunc proj s = s |> (if desc then Seq.sortByDescending proj else Seq.sortBy proj)
-                let sortedDemos =
-                    match sortBy with
-                    | "Date" -> demos |> sortFunc (fun d -> d.Date)
-                    | "Name" ->  demos |> sortFunc (fun d -> d.Name)
-                    | "Hostname" -> demos |> sortFunc (fun d -> d.Hostname)
-                    | "Duration" -> demos |> sortFunc (fun d -> d.Duration)
-                    | _ -> failwithf "unknown sort column '%s'" sortBy
-                printfn "Have %d demos, skipping %d and taking %d" demos.Count startItem maxItems
-                let demoData =
-                    { Demos = sortedDemos |> Seq.trySkip startItem |> Seq.tryTake maxItems |> Seq.map ConvertToShared.ofDemo |> List.ofSeq
-                      Pages = demos.Count / maxItems + (if demos.Count % maxItems = 0 then 0 else 1) }
-                return! json demoData next ctx
-            }
+                    let cache = ctx.GetService<IMyDemoService>()
+                    let! demos = cache.Cache
+                    let sortFunc proj s = s |> (if desc then Seq.sortByDescending proj else Seq.sortBy proj)
+                    let sortedDemos =
+                        match sortBy with
+                        | "Date" -> demos |> sortFunc (fun d -> d.Date)
+                        | "Name" ->  demos |> sortFunc (fun d -> d.Name)
+                        | "Hostname" -> demos |> sortFunc (fun d -> d.Hostname)
+                        | "Duration" -> demos |> sortFunc (fun d -> d.Duration)
+                        | _ -> failwithf "unknown sort column '%s'" sortBy
+                    printfn "Have %d demos, skipping %d and taking %d" demos.Count startItem maxItems
+                    let demoData =
+                        { Demos = sortedDemos |> Seq.trySkip startItem |> Seq.tryTake maxItems |> Seq.map ConvertToShared.ofDemo |> List.ofSeq
+                          Pages = demos.Count / maxItems + (if demos.Count % maxItems = 0 then 0 else 1) }
+                    return! json demoData next ctx
+                }
+    ]
 
 let configureApp (app : IApplicationBuilder) =
     app.UseDefaultFiles()
