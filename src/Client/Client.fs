@@ -18,25 +18,28 @@ open Shared
 type Model = {
     LoadingData : bool
     Pages : int
+    SelectedDemos : string list
+    CurrentStart: int
+    CurrentPageSize: int
     CurrentData: Demo list }
 
 // The Msg type defines what events/actions can occur while the application is running
 // the state of the application changes *only* in reaction to these events
 type Msg =
-| LoadingData
-| NewData of DemoData
-| InitialDataLoaded of DemoData
+| LoadingData of start:int * pageSize:int
+| NewData of start:int * pageSize:int * DemoData
+| SelectionChanged of string list
 
 let fetchDemos (startItem:int) (maxItems:int) =
     let url = sprintf "/api/demos?startItem=%d&maxItems=%d" startItem maxItems
     Fetch.fetchAs<DemoData> (Backend.getUrl url)
+    |> Promise.map (fun d -> startItem, maxItems, d)
 
+    //Cmd.OfPromise.perform fetch () (fun d -> NewData(startItem, d))
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
-    let initialModel = { CurrentData = []; LoadingData = true; Pages = 1 }
-    let initialData () = fetchDemos 0 50
-    let loadCountCmd =
-        Cmd.OfPromise.perform initialData () InitialDataLoaded
+    let initialModel = { CurrentData = []; LoadingData = true; Pages = 1; SelectedDemos = []; CurrentStart = 0; CurrentPageSize = 20 }
+    let loadCountCmd = Cmd.OfPromise.result (fetchDemos 0 20 |> Promise.map NewData)
     initialModel, loadCountCmd
 
 // The update function computes the next state of the application based on the current state and the incoming events/messages
@@ -44,14 +47,15 @@ let init () : Model * Cmd<Msg> =
 // these commands in turn, can dispatch messages to which the update function will react.
 let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     match msg with
-    | InitialDataLoaded initialData ->
-        let nextModel = { currentModel with CurrentData = initialData.Demos; LoadingData = false; Pages = initialData.Pages }
+    | LoadingData (start, pageSize) when not currentModel.LoadingData ->
+        let nextModel = { currentModel with LoadingData = true; CurrentPageSize = pageSize; CurrentStart = start }
+        
+        nextModel, Cmd.OfPromise.result (fetchDemos start pageSize |> Promise.map NewData)
+    | SelectionChanged sel ->
+        let nextModel = { currentModel with SelectedDemos = sel }
         nextModel, Cmd.none
-    | LoadingData ->
-        let nextModel = { currentModel with LoadingData = true }
-        nextModel, Cmd.none
-    | NewData data ->
-        let nextModel = { currentModel with CurrentData = data.Demos; LoadingData = false; Pages = data.Pages }
+    | NewData (start, pageSize, data) ->
+        let nextModel = { currentModel with CurrentData = data.Demos; LoadingData = false; Pages = data.Pages; SelectedDemos = []; CurrentStart = start; CurrentPageSize = pageSize }
         nextModel, Cmd.none
     | _ -> currentModel, Cmd.none
 
@@ -101,35 +105,82 @@ let columns =
     let c1 = createEmpty<ReactTable.Column<Demo, string>>
     c1.Header <- Some (ReactTable.TableCellRenderer.ofReactElement <| str "Name")
     c1.id <- Some "Name"
-    c1.accessor <- Some (ReactTable.Accessor.ofAccessorFunction (fun d -> Some d.Name))
+    c1.accessor <- Some (ReactTable.Accessor.ofFunc (fun d -> Some d.Name))
     let c2 = createEmpty<ReactTable.Column<Demo, string>>
     c2.Header <- Some (ReactTable.TableCellRenderer.ofReactElement <| str "Comment")
-    c2.accessor <- Some (ReactTable.Accessor.ofAccessorFunction (fun d -> Some d.Comment))
+    c2.accessor <- Some (ReactTable.Accessor.ofFunc (fun d -> Some d.Comment))
     c2.id <- Some "Comment"
     c2.Cell <- Some (ReactTable.TableCellRenderer.ofCase1 (fun info -> span [] [str (string info.value)]))
     let c3 = createEmpty<ReactTable.Column<Demo, string>>
     c3.Header <- Some (ReactTable.TableCellRenderer.ofReactElement <| str "Map")
     c3.id <- Some "Map"
-    c3.accessor <- Some (ReactTable.Accessor.ofAccessorFunction (fun d -> Some d.MapName))
+    c3.accessor <- Some (ReactTable.Accessor.ofFunc (fun d -> Some d.MapName))
     [|c1 :?> ReactTable.Column<Demo> ; c2 :?> _; c3 :?> _|]
 
 let demosView (model:Model) dispatch =
-    let p = createEmpty<ReactTable.TableProps<Demo, Demo>>
+    let p = createEmpty<ReactTable.SelectTableProps<Demo, Demo>>
     p.data <- model.CurrentData |> ResizeArray
     p.columns <- Some columns
     p.loading <- model.LoadingData
     p.pages <- Some (float model.Pages)
+    p.page <- Some (float model.CurrentStart / float model.CurrentPageSize)
+    p.pageSize <- Some (float model.CurrentPageSize)
     p.manual <- true
     p.onFetchData <- (fun state instance ->
         async {
-            dispatch(LoadingData)
-            let! demos = fetchDemos (int state.pageSize * int state.page) (int state.pageSize) |> Async.AwaitPromise
-            dispatch(NewData demos)
+            let newStart = int state.pageSize * int state.page
+            let newPageSize = int state.pageSize
+            if model.LoadingData || newStart = model.CurrentStart && newPageSize = model.CurrentPageSize then
+                ()
+            else
+                dispatch(LoadingData(newStart, newPageSize))
         }
         |> Async.StartImmediate
 
     )
-    ReactTable.table p
+    let toogle key =
+        let current =
+            model.SelectedDemos
+            |> List.filter (fun demKey -> demKey <> key)
+        let newSelected = 
+            if current.Length < model.SelectedDemos.Length then
+                current
+            else
+                key :: current
+        
+        dispatch (SelectionChanged newSelected)
+    p.toggleSelection <- Some (fun key shift _row ->
+        toogle key
+    )
+
+    let isSelected key = model.SelectedDemos |> Seq.contains key
+    p.isSelected <- Some (isSelected)
+
+    p.getTrProps <- U2.Case1 (ReactTable.ComponentPropsGetterR(fun state rowInfo column instance ->
+        let id, isSelected =
+            match rowInfo with
+            | Some r ->
+                match r.original with
+                | Some d -> d.Id, isSelected d.Id
+                | _ -> null, false
+            | _ -> null, false
+        createObj [
+            "onClick", unbox (fun (e, handleOriginal : (unit -> unit) option) ->
+                match handleOriginal with
+                | Some ha -> ha()
+                | None -> ()
+                if not (isNull id) then
+                    toogle id
+                )
+            "style", createObj [
+                "background", if isSelected then unbox "lightgreen" else null
+            ]
+        ]
+        |> Some
+    ))
+    p.selectType <- Some ReactTable.SelectType.Checkbox
+
+    ReactTable.selectTable p
     //str (sprintf "%d Demos" model.CurrentData.Length)
 
 let button txt onClick =

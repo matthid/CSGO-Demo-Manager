@@ -66,7 +66,6 @@ module Seq =
                     yield e.Current
         }
 
-
 let webApp =
     route "/api/demos" >=>
         fun next ctx ->

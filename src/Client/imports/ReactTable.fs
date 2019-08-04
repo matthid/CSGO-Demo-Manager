@@ -6,9 +6,21 @@ open Fable.Core
 open Fable.Core.JsInterop
 open Fable.React
 
+// README:
+// 'D is most of the time the type of a specific row (ie the input item)
+// 't / 'ColVal is most of the time the type of a specific column (ie the type of a field of 'D)
 type ReactNode = ReactElement
 type ReactType = ReactElement
-type ComponentType = ReactElement
+
+type ComponentType<'Props> =
+    U2<FunctionComponent<'Props>, Component<'Props, obj>>
+
+[<RequireQualifiedAccess; CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module ComponentType =
+    let ofFunc f: ComponentType<'Props> = f |> U2.Case1
+    let ofComp (c:Component<'Props, 'state>) : ComponentType<'Props> = unbox c |> U2.Case2
+
+type ComponentType = ComponentType<obj>
 
 let _css : obj = importAll "react-table/react-table.css"
 
@@ -26,8 +38,7 @@ type AccessorFunction =
 type AccessorFunction<'D> =
     AccessorFunction<'D, obj>
 
-type (*[<AllowNullLiteral>]*) AccessorFunction<'D, 'ColVal> =
-    (*[<Emit "$0($1...)">] abstract Invoke: row:*) 'D -> 'ColVal option
+type AccessorFunction<'D, 'ColVal> = delegate of row:'D -> 'ColVal option
     
 type Accessor =
     Accessor<obj, obj>
@@ -47,23 +58,21 @@ module Accessor =
     let isStringArray (v: Accessor<'D, 'ColVal>) = match v with U3.Case2 _ -> true | _ -> false
     let asStringArray (v: Accessor<'D, 'ColVal>) = match v with U3.Case2 o -> Some o | _ -> None
     let ofAccessorFunction v: Accessor<'D, 'ColVal> = v |> U3.Case3
+    let ofFunc v: Accessor<'D, 'ColVal> = AccessorFunction<'D, 'ColVal> v |> U3.Case3
     let isAccessorFunction (v: Accessor<'D, 'ColVal>) = match v with U3.Case3 _ -> true | _ -> false
     let asAccessorFunction (v: Accessor<'D, 'ColVal>) = match v with U3.Case3 o -> Some o | _ -> None
 
-type (*[<AllowNullLiteral>]*) Aggregator = obj option -> obj option -> obj option
-    //[<Emit "$0($1...)">] abstract Invoke: values: obj option * rows: obj option -> obj option
+type Aggregator = delegate of values:obj option * rows:obj option -> obj option
 
-type TableCellRenderer<'t> =
-    U2<(CellInfo<'t> -> ReactElement), ReactElement>
+type TableCellRenderer<'D, 't> =
+    U2<(CellInfo<'D, 't> -> ReactElement), ReactElement>
 
 [<RequireQualifiedAccess; CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module TableCellRenderer =
-    let ofCase1 v: TableCellRenderer<'t> = v |> U2.Case1
-    let isCase1 (v: TableCellRenderer<'t>) = match v with U2.Case1 _ -> true | _ -> false
-    let asCase1 (v: TableCellRenderer<'t>) = match v with U2.Case1 o -> Some o | _ -> None
-    let ofReactElement v: TableCellRenderer<'t> = v |> U2.Case2
-    //let isReactElement (v: TableCellRenderer) = match v with U2.Case2 _ -> true | _ -> false
-    //let asReactElement (v: TableCellRenderer) = match v with U2.Case2 o -> Some o | _ -> None
+    let ofCase1 v: TableCellRenderer<'D,'t> = v |> U2.Case1
+    let isCase1 (v: TableCellRenderer<'D,'t>) = match v with U2.Case1 _ -> true | _ -> false
+    let asCase1 (v: TableCellRenderer<'D,'t>) = match v with U2.Case1 o -> Some o | _ -> None
+    let ofReactElement v: TableCellRenderer<'D,'t> = v |> U2.Case2
 
 type [<AllowNullLiteral>] FilterRender =
     [<Emit "$0($1...)">] abstract Invoke: ``params``: FilterRenderInvokeParams -> ReactElement
@@ -74,65 +83,36 @@ type [<AllowNullLiteral>] FilterRenderInvokeParams =
     abstract onChange: ReactTableFunction with get, set
     abstract key: string option with get, set
 
-type PivotRenderer<'t> =
-    U4<(CellInfo<'t> -> ReactElement), (unit -> obj option), string, ReactElement>
+type PivotRenderer<'D, 't> =
+    U4<(CellInfo<'D, 't> -> ReactElement), (unit -> obj option), string, ReactElement>
 
 [<RequireQualifiedAccess; CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module PivotRenderer =
-    let ofCase1 v: PivotRenderer<'t> = v |> U4.Case1
-    let isCase1 (v: PivotRenderer<'t>) = match v with U4.Case1 _ -> true | _ -> false
-    let asCase1 (v: PivotRenderer<'t>) = match v with U4.Case1 o -> Some o | _ -> None
-    let ofCase2 v: PivotRenderer<'t> = v |> U4.Case2
-    let isCase2 (v: PivotRenderer<'t>) = match v with U4.Case2 _ -> true | _ -> false
-    let asCase2 (v: PivotRenderer<'t>) = match v with U4.Case2 o -> Some o | _ -> None
-    let ofString v: PivotRenderer<'t> = v |> U4.Case3
-    let isString (v: PivotRenderer<'t>) = match v with U4.Case3 _ -> true | _ -> false
-    let asString (v: PivotRenderer<'t>) = match v with U4.Case3 o -> Some o | _ -> None
-    let ofReactElement v: PivotRenderer<'t> = v |> U4.Case4
-    //let isReactElement (v: PivotRenderer) = match v with U4.Case4 _ -> true | _ -> false
-    //let asReactElement (v: PivotRenderer) = match v with U4.Case4 o -> Some o | _ -> None
+    let ofCase1 v: PivotRenderer<'D,'t> = v |> U4.Case1
+    let isCase1 (v: PivotRenderer<'D,'t>) = match v with U4.Case1 _ -> true | _ -> false
+    let asCase1 (v: PivotRenderer<'D,'t>) = match v with U4.Case1 o -> Some o | _ -> None
+    let ofCase2 v: PivotRenderer<'D,'t> = v |> U4.Case2
+    let isCase2 (v: PivotRenderer<'D,'t>) = match v with U4.Case2 _ -> true | _ -> false
+    let asCase2 (v: PivotRenderer<'D,'t>) = match v with U4.Case2 o -> Some o | _ -> None
+    let ofString v: PivotRenderer<'D,'t> = v |> U4.Case3
+    let isString (v: PivotRenderer<'D,'t>) = match v with U4.Case3 _ -> true | _ -> false
+    let asString (v: PivotRenderer<'D,'t>) = match v with U4.Case3 o -> Some o | _ -> None
+    let ofReactElement v: PivotRenderer<'D,'t> = v |> U4.Case4
 
-type [<AllowNullLiteral>] ComponentPropsGetter0 =
-    [<Emit "$0($1...)">] abstract Invoke: finalState: obj option * rowInfo: obj * column: obj * ?instance: obj -> obj option
-
-type [<AllowNullLiteral>] ComponentPropsGetterR =
-    [<Emit "$0($1...)">] abstract Invoke: finalState: obj option * ?rowInfo: RowInfo * ?column: obj * ?instance: obj -> obj option
-
-type [<AllowNullLiteral>] ComponentPropsGetterC =
-    [<Emit "$0($1...)">] abstract Invoke: finalState: obj option * ?rowInfo: obj * ?column: Column * ?instance: obj -> obj option
-
-type [<AllowNullLiteral>] ComponentPropsGetterRC =
-    [<Emit "$0($1...)">] abstract Invoke: finalState: obj option * ?rowInfo: RowInfo * ?column: Column * ?instance: obj -> obj option
-
-type [<AllowNullLiteral>] DefaultFilterFunction =
-    [<Emit "$0($1...)">] abstract Invoke: filter: Filter * row: obj option * column: obj option -> bool
-
-type [<AllowNullLiteral>] FilterFunction =
-    [<Emit "$0($1...)">] abstract Invoke: filter: Filter * rows: ResizeArray<obj option> * column: obj option -> ResizeArray<obj option>
-
-type [<AllowNullLiteral>] SubComponentFunction =
-    [<Emit "$0($1...)">] abstract Invoke: rowInfo: RowInfo -> ReactElement
-
-type [<AllowNullLiteral>] PageChangeFunction =
-    [<Emit "$0($1...)">] abstract Invoke: page: float -> unit
-
-type [<AllowNullLiteral>] PageSizeChangeFunction =
-    [<Emit "$0($1...)">] abstract Invoke: newPageSize: float * newPage: float -> unit
-
-type [<AllowNullLiteral>] SortedChangeFunction =
-    [<Emit "$0($1...)">] abstract Invoke: newSorted: ResizeArray<SortingRule> * column: obj option * additive: bool -> unit
-
-type [<AllowNullLiteral>] FilteredChangeFunction =
-    [<Emit "$0($1...)">] abstract Invoke: newFiltering: ResizeArray<Filter> * column: obj option * value: obj option -> unit
-
-type [<AllowNullLiteral>] ExpandedChangeFunction =
-    [<Emit "$0($1...)">] abstract Invoke: column: obj option * ``event``: obj option * isTouch: bool -> unit
-
-type [<AllowNullLiteral>] ResizedChangeFunction =
-    [<Emit "$0($1...)">] abstract Invoke: newResized: ResizeArray<Resize> * ``event``: obj option -> unit
-
-type [<AllowNullLiteral>] SortFunction =
-    [<Emit "$0($1...)">] abstract Invoke: a: obj option * b: obj option * desc: obj option -> float
+type ComponentPropsGetter0 = delegate of finalState: obj option * rowInfo: obj * column: obj * ?instance: obj -> obj option
+type ComponentPropsGetterR<'D> = delegate of finalState: obj option * ?rowInfo: RowInfo<'D> * ?column: obj * ?instance: obj -> obj option
+type ComponentPropsGetterC = delegate of finalState: obj option * ?rowInfo: obj * ?column: Column * ?instance: obj -> obj option
+type ComponentPropsGetterRC<'D> = delegate of finalState: obj option * ?rowInfo: RowInfo<'D> * ?column: Column * ?instance: obj -> obj option
+type DefaultFilterFunction = delegate of filter: Filter * row: obj option * column: obj option -> bool
+type FilterFunction = delegate of filter: Filter * rows: ResizeArray<obj option> * column: obj option -> ResizeArray<obj option>
+type SubComponentFunction<'D> = delegate of rowInfo: RowInfo<'D> -> ReactElement
+type PageChangeFunction = delegate of page: float -> unit
+type PageSizeChangeFunction = delegate of newPageSize: float * newPage: float -> unit
+type SortedChangeFunction = delegate of newSorted: ResizeArray<SortingRule> * column: obj option * additive: bool -> unit
+type FilteredChangeFunction = delegate of newFiltering: ResizeArray<Filter> * column: obj option * value: obj option -> unit
+type ExpandedChangeFunction = delegate of column: obj option * ``event``: obj option * isTouch: bool -> unit
+type ResizedChangeFunction = delegate of newResized: ResizeArray<Resize> * ``event``: obj option -> unit
+type SortFunction = delegate of a: obj option * b: obj option * desc: obj option -> float
 
 type [<AllowNullLiteral>] Resize =
     abstract id: string with get, set
@@ -155,10 +135,10 @@ type TableProps =
 
 type [<AllowNullLiteral>] TableProps<'D, 'ResolvedData> =
     inherit TextProps
-    inherit ComponentDecoratorProps
+    inherit ComponentDecoratorProps<'D>
     inherit ControlledStateCallbackProps
     inherit PivotingProps
-    inherit ControlledStateOverrideProps
+    inherit ControlledStateOverrideProps<'D>
     inherit ComponentProps
     /// Default: [] 
     abstract data: ResizeArray<'D> with get, set
@@ -245,7 +225,7 @@ type [<AllowNullLiteral>] TableProps<'D, 'ResolvedData> =
     /// Control callback for functional rendering 
     abstract children: (FinalState<'ResolvedData> -> (unit -> ReactElement) -> Instance<'ResolvedData> -> ReactElement) with get, set
 
-type [<AllowNullLiteral>] ControlledStateOverrideProps =
+type [<AllowNullLiteral>] ControlledStateOverrideProps<'D> =
     /// Default: undefined 
     abstract page: float option with get, set
     /// Default: undefined 
@@ -263,7 +243,7 @@ type [<AllowNullLiteral>] ControlledStateOverrideProps =
     /// Default: {} 
     abstract expanded: TypeLiteral_01 with get, set
     /// Sub component 
-    abstract SubComponent: SubComponentFunction with get, set
+    abstract SubComponent: SubComponentFunction<'D> with get, set
     
 type [<AllowNullLiteral>] FetchDataState =
     /// Default: undefined 
@@ -328,8 +308,8 @@ type [<AllowNullLiteral>] ControlledStateCallbackProps =
     /// Called when a user clicks on a resizing component (the right edge of a column header) 
     abstract onResizedChange: ResizedChangeFunction with get, set
 
-type [<AllowNullLiteral>] ComponentDecoratorProps =
-    abstract getProps: U3<ComponentPropsGetterRC, ComponentPropsGetterC, ComponentPropsGetter0> with get, set
+type [<AllowNullLiteral>] ComponentDecoratorProps<'D> =
+    abstract getProps: U3<ComponentPropsGetterRC<'D>, ComponentPropsGetterC, ComponentPropsGetter0> with get, set
     abstract getTableProps: ComponentPropsGetter0 with get, set
     abstract getTheadGroupProps: ComponentPropsGetter0 with get, set
     abstract getTheadGroupTrProps: ComponentPropsGetter0 with get, set
@@ -341,9 +321,9 @@ type [<AllowNullLiteral>] ComponentDecoratorProps =
     abstract getTheadFilterTrProps: ComponentPropsGetter0 with get, set
     abstract getTheadFilterThProps: ComponentPropsGetterC with get, set
     abstract getTbodyProps: ComponentPropsGetter0 with get, set
-    abstract getTrGroupProps: U2<ComponentPropsGetterR, ComponentPropsGetter0> with get, set
-    abstract getTrProps: U2<ComponentPropsGetterR, ComponentPropsGetter0> with get, set
-    abstract getTdProps: U2<ComponentPropsGetterRC, ComponentPropsGetterR> with get, set
+    abstract getTrGroupProps: U2<ComponentPropsGetterR<'D>, ComponentPropsGetter0> with get, set
+    abstract getTrProps: U2<ComponentPropsGetterR<'D>, ComponentPropsGetter0> with get, set
+    abstract getTdProps: U2<ComponentPropsGetterRC<'D>, ComponentPropsGetterR<'D>> with get, set
     abstract getTfootProps: ComponentPropsGetter0 with get, set
     abstract getTfootTrProps: ComponentPropsGetter0 with get, set
     abstract getTfootTdProps: ComponentPropsGetterC with get, set
@@ -389,12 +369,12 @@ type [<AllowNullLiteral>] TextProps =
     /// Default: 'rows' 
     abstract rowsText: string with get, set
 
-type [<AllowNullLiteral>] GlobalColumn<'D> =
-    inherit Column.Basics<'D>
-    inherit Column.CellProps<'D>
+type [<AllowNullLiteral>] GlobalColumn<'D, 't> =
+    inherit Column.Basics<'D, 't>
+    inherit Column.CellProps<'D, 't>
     inherit Column.FilterProps
-    inherit Column.FooterProps<'D>
-    inherit Column.HeaderProps<'D>
+    inherit Column.FooterProps<'D, 't>
+    inherit Column.HeaderProps<'D, 't>
 
 type [<AllowNullLiteral>] ExpanderDefaults =
     /// Default: false 
@@ -406,9 +386,9 @@ type [<AllowNullLiteral>] ExpanderDefaults =
     /// Default: 35 
     abstract width: float with get, set
 
-type [<AllowNullLiteral>] PivotDefaults =
+type [<AllowNullLiteral>] PivotDefaults<'D> =
     /// Will be overriden in methods.js to display ExpanderComponent 
-    abstract render: TableCellRenderer<obj> with get, set
+    abstract render: TableCellRenderer<'D, obj> with get, set
 
 type Column =
     Column<obj>
@@ -418,7 +398,7 @@ type Column<'D> =
 
 module Column =
     /// Basic column props 
-    type [<AllowNullLiteral>] Basics<'t> =
+    type [<AllowNullLiteral>] Basics<'D, 't> =
         /// Default: undefined, use table default 
         abstract sortable: bool option with get, set
         /// Default: true 
@@ -434,16 +414,16 @@ module Column =
         /// Default: false 
         abstract defaultSortDesc: bool option with get, set
         /// Used to render aggregated cells. Defaults to a comma separated list of values. 
-        abstract Aggregated: TableCellRenderer<'t> with get, set
+        abstract Aggregated: TableCellRenderer<'D, 't> with get, set
         /// Used to render a pivoted cell  
-        abstract Pivot: PivotRenderer<'t> with get, set
+        abstract Pivot: PivotRenderer<'D, 't> with get, set
         /// Used to render the value inside of a Pivot cell 
-        abstract PivotValue: TableCellRenderer<'t> with get, set
+        abstract PivotValue: TableCellRenderer<'D, 't> with get, set
         /// Used to render the expander in both Pivot and Expander cells 
-        abstract Expander: TableCellRenderer<'t> with get, set
+        abstract Expander: TableCellRenderer<'D, 't> with get, set
     
     /// Basic column props 
-    type [<AllowNullLiteral>] PartialBasics<'t> =
+    type [<AllowNullLiteral>] PartialBasics<'D, 't> =
         /// Default: undefined, use table default 
         abstract sortable: bool option with get, set
         /// Default: true 
@@ -459,19 +439,19 @@ module Column =
         /// Default: false 
         abstract defaultSortDesc: bool option with get, set
         /// Used to render aggregated cells. Defaults to a comma separated list of values. 
-        abstract Aggregated: TableCellRenderer<'t> option with get, set
+        abstract Aggregated: TableCellRenderer<'D, 't> option with get, set
         /// Used to render a pivoted cell  
-        abstract Pivot: PivotRenderer<'t> option with get, set
+        abstract Pivot: PivotRenderer<'D, 't> option with get, set
         /// Used to render the value inside of a Pivot cell 
-        abstract PivotValue: TableCellRenderer<'t> option with get, set
+        abstract PivotValue: TableCellRenderer<'D, 't> option with get, set
         /// Used to render the expander in both Pivot and Expander cells 
-        abstract Expander: TableCellRenderer<'t> option with get, set
+        abstract Expander: TableCellRenderer<'D, 't> option with get, set
 
     /// Configuration of a columns cell section 
-    type [<AllowNullLiteral>] CellProps<'t> =
+    type [<AllowNullLiteral>] CellProps<'D, 't> =
         /// Default: undefined
         /// A function that returns a primitive, or JSX / React Component
-        abstract Cell: TableCellRenderer<'t> with get, set
+        abstract Cell: TableCellRenderer<'D, 't> with get, set
         /// Set the classname of the `td` element of the column
         abstract className: string with get, set
         /// Set the style of the `td` element of the column
@@ -479,10 +459,10 @@ module Column =
         abstract getProps: ReactTableFunction with get, set
     
     /// Configuration of a columns cell section 
-    type [<AllowNullLiteral>] PartialCellProps<'t> =
+    type [<AllowNullLiteral>] PartialCellProps<'D, 't> =
         /// Default: undefined
         /// A function that returns a primitive, or JSX / React Component
-        abstract Cell: TableCellRenderer<'t> option with get, set
+        abstract Cell: TableCellRenderer<'D, 't> option with get, set
         /// Set the classname of the `td` element of the column
         abstract className: string option with get, set
         /// Set the style of the `td` element of the column
@@ -490,10 +470,10 @@ module Column =
         abstract getProps: ReactTableFunction option with get, set
 
     /// Configuration of a columns header section 
-    type [<AllowNullLiteral>] HeaderProps<'t> =
+    type [<AllowNullLiteral>] HeaderProps<'D, 't> =
         /// Default: undefined
         /// A function that returns a primitive, or JSX / React Component
-        abstract Header: TableCellRenderer<'t> with get, set
+        abstract Header: TableCellRenderer<'D, 't> with get, set
         /// Set the classname of the `th` element of the column
         abstract headerClassName: string with get, set
         /// Default: {}
@@ -504,10 +484,10 @@ module Column =
         abstract getHeaderProps: ReactTableFunction with get, set
     
     /// Configuration of a columns header section 
-    type [<AllowNullLiteral>] PartialHeaderProps<'t> =
+    type [<AllowNullLiteral>] PartialHeaderProps<'D, 't> =
         /// Default: undefined
         /// A function that returns a primitive, or JSX / React Component
-        abstract Header: TableCellRenderer<'t> option with get, set
+        abstract Header: TableCellRenderer<'D, 't> option with get, set
         /// Set the classname of the `th` element of the column
         abstract headerClassName: string option with get, set
         /// Default: {}
@@ -518,10 +498,10 @@ module Column =
         abstract getHeaderProps: ReactTableFunction option with get, set
 
     /// Configuration of a columns footer section 
-    type [<AllowNullLiteral>] FooterProps<'t> =
+    type [<AllowNullLiteral>] FooterProps<'D, 't> =
         /// Default: undefined
         /// A function that returns a primitive, or JSX / React Component
-        abstract Footer: TableCellRenderer<'t> with get, set
+        abstract Footer: TableCellRenderer<'D, 't> with get, set
         /// Default: string
         /// Set the classname of the `td` element of the column's footer
         abstract footerClassName: string with get, set
@@ -533,10 +513,10 @@ module Column =
         abstract getFooterProps: ReactTableFunction with get, set
     
     /// Configuration of a columns footer section 
-    type [<AllowNullLiteral>] PartialFooterProps<'t> =
+    type [<AllowNullLiteral>] PartialFooterProps<'D, 't> =
         /// Default: undefined
         /// A function that returns a primitive, or JSX / React Component
-        abstract Footer: TableCellRenderer<'t> option with get, set
+        abstract Footer: TableCellRenderer<'D, 't> option with get, set
         /// Default: string
         /// Set the classname of the `td` element of the column's footer
         abstract footerClassName: string option with get, set
@@ -578,11 +558,11 @@ module Column =
         abstract Filter: FilterRender option with get, set
 
 type [<AllowNullLiteral>] Column<'D, 'ColVal> =
-    inherit Column.PartialBasics<'ColVal>
-    inherit Column.PartialCellProps<'ColVal>
+    inherit Column.PartialBasics<'D, 'ColVal>
+    inherit Column.PartialCellProps<'D, 'ColVal>
     inherit Column.PartialFilterProps
-    inherit Column.PartialFooterProps<'ColVal>
-    inherit Column.PartialHeaderProps<'ColVal>
+    inherit Column.PartialFooterProps<'D, 'ColVal>
+    inherit Column.PartialHeaderProps<'D, 'ColVal>
     /// Property name as string or Accessor
     abstract accessor: Accessor<'D, 'ColVal> option with get, set
     /// Conditional - A unique ID is required if the accessor is not a string or if you would like to override the column name used in server-side calls
@@ -622,7 +602,7 @@ type [<AllowNullLiteral>] RowRenderProps =
     /// The current cell value 
     abstract value: obj option with get, set
 
-type [<AllowNullLiteral>] RowInfo =
+type [<AllowNullLiteral>] RowInfo<'D> =
     /// Materialized row of data 
     abstract row: obj option with get, set
     /// The post-accessed values from the original row 
@@ -646,10 +626,10 @@ type [<AllowNullLiteral>] RowInfo =
     /// An array of any expandable sub-rows contained in this row 
     abstract subRows: ResizeArray<obj option> with get, set
     /// Original object passed to row 
-    abstract original: obj option with get, set
+    abstract original: 'D option with get, set
 
-type [<AllowNullLiteral>] CellInfo<'t> =
-    inherit RowInfo
+type [<AllowNullLiteral>] CellInfo<'D, 't> =
+    inherit RowInfo<'D>
     //inherit obj
     abstract isExpanded: bool with get, set
     abstract column: Column with get, set
@@ -720,6 +700,49 @@ type [<AllowNullLiteral>] Instance<'D> =
 type [<AllowNullLiteral>] TypeLiteral_01 =
     interface end
 
+type [<StringEnum>] [<RequireQualifiedAccess>] SelectType =
+    | Checkbox
+    | Radio
+
+type [<AllowNullLiteral>] SelectInputComponentProps =
+    abstract selectType: SelectType with get, set
+    /// onClick: (key: string, shiftKeyPressed: boolean, row: any) => any;
+    abstract onClick: (string -> bool -> obj option -> unit) with get, set
+    abstract ``checked``: bool with get, set
+    abstract id: string with get, set
+    abstract row: obj option with get, set
+
+type [<AllowNullLiteral>] SelectAllInputComponentProps =
+    abstract selectType: SelectType with get, set
+    abstract ``checked``: bool with get, set
+    abstract onClick: (unit -> obj option) with get, set
+
+type SelectTableProps<'data, 'resolvedData> =
+    inherit TableProps<'data, 'resolvedData>
+    
+    /// Default: _id
+    abstract keyField: string option with get, set
+    abstract isSelected: (string -> bool) option with get, set
+    abstract selectAll: bool option with get, set
+    abstract toggleAll: (unit -> unit) option with get, set
+    /// onClick: (key: string, shiftKeyPressed: boolean, row: any) => any;
+    abstract toggleSelection: (string -> bool -> obj option -> unit) option with get, set
+    /// Default: checkbox
+    abstract selectType: SelectType option with get, set
+    abstract selectWidth: float option with get, set
+    abstract SelectInputComponent: ComponentType<SelectInputComponentProps> option with get, set
+    abstract SelectAllInputComponent: ComponentType<SelectAllInputComponentProps> option with get, set
+
+type ITableCreator = interface end
+    //[<Emit "new $0($1...)">] abstract Create: unit -> ReactTable(*<'D>*)
 
 // https://github.com/fable-compiler/fable-react/issues/61
-let table (props:TableProps<'data, 'resolvedData>) = ofImport "default" "react-table" props []
+let RawTable : ITableCreator = import "default" "react-table"
+let inline hocTable path : ITableCreator -> ITableCreator = import "default" path
+let selectTableFunc table = hocTable "react-table/lib/hoc/selectTable" table
+
+let createTable (tableCreator:ITableCreator) (props:TableProps<'data, 'resolvedData>) = 
+    ReactBindings.React.createElement(tableCreator, props, [])
+let selectTable (props:SelectTableProps<'data, 'resolvedData>) = createTable (selectTableFunc RawTable) props
+
+let table (props:TableProps<'data, 'resolvedData>) = createTable RawTable props
