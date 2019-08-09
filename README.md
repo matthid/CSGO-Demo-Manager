@@ -53,7 +53,6 @@ Original Demo Manager
 - Download MM demos after CSGO is closed
 - "properly" Support multiple accounts 
 - Mark Win/Loss on Demos
-- Add SignalR for frontend notifications
 - Implement DialogService for notifications
 - Details page for demos
 - Watch details page/popup -> Launch CSGO
