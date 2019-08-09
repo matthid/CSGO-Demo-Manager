@@ -3,7 +3,7 @@ module rec SignalR
 
 open System
 open Fable.Core
-open Fable.Import.JS
+open Fable.Core.JS
 
 let [<Import("*","@aspnet/signalr")>] signalr: SignalR.IExports = jsNative
 
@@ -56,7 +56,7 @@ type [<AllowNullLiteral>] HubConnection =
     abstract off: methodName: string * ?``method``: (ResizeArray<obj option> -> unit) -> unit
     /// <summary>Registers a handler that will be invoked when the connection is closed.</summary>
     /// <param name="callback">The handler that will be invoked when the connection is closed. Optionally receives a single argument containing the error that caused the connection to close (if any).</param>
-    abstract onclose: callback: (Error -> unit) -> unit
+    abstract onclose: callback: (exn -> unit) -> unit
 
 /// A builder for configuring {@link HubConnection} instances.
 type [<AllowNullLiteral>] HubConnectionBuilder =

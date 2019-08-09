@@ -686,3 +686,8 @@ type DemoData =
 
 type StartMMDownloadResult =
     { Status : string }
+
+type Notification =
+    | DemosFound of string list
+    | Hint of string
+    | Error of string

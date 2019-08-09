@@ -3,4 +3,5 @@ group Server
     Giraffe
     Microsoft.AspNetCore
     Microsoft.AspNetCore.StaticFiles
+    Microsoft.AspNetCore.SignalR
     Thoth.Json.Giraffe

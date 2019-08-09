@@ -14,11 +14,47 @@ open Services.Interfaces
 open Services.Concrete.Excel
 open Services.Concrete
 open System.Collections.Generic
+open Microsoft.AspNetCore.SignalR
+open Microsoft.AspNetCore.Http
+open System.Threading
+
+type INotificationService =
+    abstract SendNotification : notification:Notification -> Task
 
 type IMyDemoService =
     abstract member Cache : Async<IReadOnlyCollection<Core.Models.Demo>> with get
-type MyDemoService(cache : ICacheService) =
+    abstract member StartMMDownload : CancellationToken -> unit
+    
+type MyDemoService(cache : ICacheService, steam:ISteamService, notifications:INotificationService, demoService:IDemosService) =
     let demos = cache.GetDemoListAsync()
+    do demoService.DownloadFolderPath <-
+        let csGoPath = Core.AppSettings.GetCsgoPath()
+        let demoFolder = csGoPath + string Path.DirectorySeparatorChar + "replays"
+        if Directory.Exists (demoFolder) then
+            demoFolder
+        else
+            eprintf "replays folder '%s' doesn't exist!" demoFolder
+            demoService.DownloadFolderPath
+    let sendErr msg = 
+        notifications.SendNotification(Notification.Error msg)
+    let send msg = 
+        notifications.SendNotification(Notification.Hint msg)
+    member x.ProcessDemosDownloaded (ct:CancellationToken) =
+        task {
+            let! demos = demoService.GetDemoListUrl()
+            if demos.Count > 0 then
+                for kv, i in demos |> Seq.mapi (fun i kv -> kv, i) do
+                    let demoName, demoUrl = kv.Key, kv.Value
+                    do! send (sprintf "Downloading '%s' (%d/%d)" demoName (i+1) demos.Count)
+                    let! ok = demoService.DownloadDemo(demoUrl, demoName)
+                    do! send (sprintf "Extracting '%s' (%d/%d)" demoName (i+1) demos.Count)
+                    let! ok = demoService.DecompressDemoArchive(demoName)
+                    ()
+                do! send "All done."                
+            else 
+                do! send "No newer demos found"
+
+        }
     interface IMyDemoService with
         member x.Cache
             with get () =
@@ -26,6 +62,30 @@ type MyDemoService(cache : ICacheService) =
                     let! de = demos |> Async.AwaitTask
                     return de :> IReadOnlyCollection<_>
                 }
+
+        member x.StartMMDownload (ct:CancellationToken) =
+            task {
+                if not (Directory.Exists demoService.DownloadFolderPath) then
+                    do! sendErr (sprintf "Download folder '%s' not found" demoService.DownloadFolderPath)
+                else
+                try
+                    let! result = steam.GenerateMatchListFile(ct)
+                    printfn "Boiler.exe result %d" result
+                    // See DemoListViewModel.HandleBoilerResult
+                    match result with
+                    | 1 -> do! sendErr "BoilerNotFound"
+                    | 2 -> do! sendErr "DialogBoilerIncorrect"
+                    | -1 -> do! sendErr "Invalid arguments"
+                    | -2 -> do! sendErr "DialogRestartSteam"
+                    | -3 | -4 -> do! sendErr "DialogSteamNotRunningOrNotLoggedIn"
+                    | -5 | -6 | -7 -> do! sendErr "DialogErrorWhileRetrievingMatchesData"
+                    | -8 -> do! sendErr "DialogNoNewerDemo"
+                    | 0 -> do! x.ProcessDemosDownloaded ct
+                    | _ -> do! sendErr (sprintf "Unknown boiler exit code '%d'" result)
+                with e ->
+                    do! sendErr <| e.ToString()
+            }
+            |> ignore        
 
 let tryGetEnv = System.Environment.GetEnvironmentVariable >> function null | "" -> None | x -> Some x
 
@@ -66,12 +126,19 @@ module Seq =
                     yield e.Current
         }
 
+
+
 let webApp =
     choose [
         route "/api/downloadMM" >=>
             fun next ctx ->
                 task {
                     let r = { Status = "Ok" }
+                    //let notification = ctx.GetService<INotificationService>()
+                    //let demoService = ctx.GetService<IDemosService>()
+                    //do! notification.SendNotification (Notification.Hint (sprintf "downloadPath: %s" demoService.DownloadFolderPath))
+                    let demoService = ctx.GetService<IMyDemoService>()
+                    demoService.StartMMDownload CancellationToken.None
                     return! json r next ctx
                 }
         route "/api/demos" >=>
@@ -108,9 +175,23 @@ let webApp =
                 }
     ]
 
+type NotificationHub () =
+    inherit Hub()
+
+
+type NotificationService (context: IHubContext<NotificationHub>) =
+    interface INotificationService with
+        member x.SendNotification notification =
+            let s = Thoth.Json.Net.Encode.Auto.toString(0, notification)
+            context.Clients.All.SendAsync("Notification", s)
+
 let configureApp (app : IApplicationBuilder) =
     app.UseDefaultFiles()
-       .UseStaticFiles()
+       .UseStaticFiles() |> ignore<IApplicationBuilder>
+    app.UseSignalR(fun routes ->
+        routes.MapHub<NotificationHub>(PathString "/socket/notifications"))
+        |> ignore<IApplicationBuilder>
+    app
        .UseGiraffe webApp
 
 let configureServices (services : IServiceCollection) =
@@ -128,11 +209,14 @@ let configureServices (services : IServiceCollection) =
     services.AddSingleton<IStuffService, StuffService>()|> ignore<IServiceCollection>
     services.AddSingleton<IAccountStatsService, AccountStatsService>() |> ignore<IServiceCollection>
     services.AddSingleton<IMyDemoService, MyDemoService>() |> ignore<IServiceCollection>
+    services.AddSingleton<INotificationService, NotificationService>() |> ignore<IServiceCollection>
     //services.AddSingleton<IMapService, MapService>();
     //services.AddSingleton<IDialogService, DialogService>();
 
-    services.AddGiraffe() |> ignore
-    services.AddSingleton<Giraffe.Serialization.Json.IJsonSerializer>(Thoth.Json.Giraffe.ThothSerializer()) |> ignore
+    services.AddGiraffe() |> ignore<IServiceCollection>
+    
+    services.AddSignalR() |> ignore<ISignalRServerBuilder>
+    services.AddSingleton<Giraffe.Serialization.Json.IJsonSerializer>(Thoth.Json.Giraffe.ThothSerializer()) |> ignore<IServiceCollection>
 
 let host =
     WebHost

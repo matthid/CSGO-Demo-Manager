@@ -19,5 +19,16 @@
         <None Include="Test.fsx" />
         <Compile Include="Server.fs" />
     </ItemGroup>
+    <ItemGroup>
+        <Content Include="..\..\external\csgo-demo-manager\Manager\boiler.exe" Link="boiler.exe">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="..\..\external\csgo-demo-manager\Manager\steam_api.dll" Link="steam_api.dll">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Include="..\..\external\csgo-demo-manager\Manager\steam_appid.txt" Link="steam_appid.dll">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
     <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
