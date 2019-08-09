@@ -604,9 +604,9 @@ type Demo = {
 
     OneKillCount : int// [JsonProperty("1k_count")] public int OneKillCount
 
-    TeamCT : Team //[JsonProperty("team_ct", IsReference = false)] public Team TeamCT
+    //TeamCT : Team //[JsonProperty("team_ct", IsReference = false)] public Team TeamCT
 
-    TeamT : Team //[JsonProperty("team_t", IsReference = false)]    public Team TeamT
+    //TeamT : Team //[JsonProperty("team_t", IsReference = false)]    public Team TeamT
 
     //[JsonProperty("team_surrender", IsReference = true)]    public Team Surrender
     //[JsonProperty("team_winner", IsReference = true)]    public Team Winner

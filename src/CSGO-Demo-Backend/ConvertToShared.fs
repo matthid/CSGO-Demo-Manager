@@ -299,6 +299,6 @@ let ofDemo (demo:CSDemo) : FSDemo =
         ThreeKillCount = demo.ThreeKillCount
         TwoKillCount = demo.TwoKillCount
         OneKillCount = demo.OneKillCount
-        TeamCT = demo.TeamCT |> ofTeam
-        TeamT = demo.TeamT |> ofTeam
+        //TeamCT = demo.TeamCT |> ofTeam
+        //TeamT = demo.TeamT |> ofTeam
     }
