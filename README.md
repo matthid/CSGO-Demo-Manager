@@ -48,8 +48,9 @@ Original Demo Manager
 
 ## TODOs
 
-- Make Download MM button work (with old boiler.exe implementation)
-- Analyse demos automatically
+- Warn when CSGO is open (MM Download)
+- Improve performance of MM download
+- Windows Installer
 - Download MM demos after CSGO is closed
 - "properly" Support multiple accounts 
 - Mark Win/Loss on Demos
