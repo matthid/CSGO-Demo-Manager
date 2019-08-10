@@ -6,6 +6,7 @@ open Microsoft.AspNetCore
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Hosting
 open Microsoft.Extensions.DependencyInjection
+open Microsoft.Extensions.Logging
 
 open FSharp.Control.Tasks.V2
 open Giraffe
@@ -18,6 +19,11 @@ open Microsoft.AspNetCore.SignalR
 open Microsoft.AspNetCore.Http
 open System.Threading
 
+module LogEvents =
+    let MissingReplayFolder = EventId 20001
+    let BoilerExitCode = EventId 20002
+    let ErrorMMDownload = EventId 20003
+
 type INotificationService =
     abstract SendNotification : notification:Notification -> Task
 
@@ -25,7 +31,8 @@ type IMyDemoService =
     abstract member Cache : Async<IReadOnlyCollection<Core.Models.Demo>> with get
     abstract member StartMMDownload : CancellationToken -> unit
     
-type MyDemoService(cache : ICacheService, steam:ISteamService, notifications:INotificationService, demoService:IDemosService) =
+type MyDemoService(logger:ILogger<MyDemoService>, cache : ICacheService, steam:ISteamService, notifications:INotificationService, demoService:IDemosService) =
+    do Core.Logger.CoreInstance <- logger
     let demos = cache.GetDemoListAsync()
     do demoService.DownloadFolderPath <-
         let csGoPath = Core.AppSettings.GetCsgoPath()
@@ -33,7 +40,7 @@ type MyDemoService(cache : ICacheService, steam:ISteamService, notifications:INo
         if Directory.Exists (demoFolder) then
             demoFolder
         else
-            eprintf "replays folder '%s' doesn't exist!" demoFolder
+            logger.LogWarning(LogEvents.MissingReplayFolder, "Replays folder '{folderName}' doesn't exit", demoFolder)
             demoService.DownloadFolderPath
     let sendErr msg = 
         notifications.SendNotification(Notification.Error msg)
@@ -70,7 +77,7 @@ type MyDemoService(cache : ICacheService, steam:ISteamService, notifications:INo
                 else
                 try
                     let! result = steam.GenerateMatchListFile(ct)
-                    printfn "Boiler.exe result %d" result
+                    logger.LogInformation(LogEvents.BoilerExitCode, "Boiler.exe result {exitCode}", result)
                     // See DemoListViewModel.HandleBoilerResult
                     match result with
                     | 1 -> do! sendErr "BoilerNotFound"
@@ -83,6 +90,7 @@ type MyDemoService(cache : ICacheService, steam:ISteamService, notifications:INo
                     | 0 -> do! x.ProcessDemosDownloaded ct
                     | _ -> do! sendErr (sprintf "Unknown boiler exit code '%d'" result)
                 with e ->
+                    logger.LogError(LogEvents.ErrorMMDownload, e, "Error in StartMMDownload")
                     do! sendErr <| e.ToString()
             }
             |> ignore        
@@ -216,6 +224,7 @@ let configureServices (services : IServiceCollection) =
     services.AddGiraffe() |> ignore<IServiceCollection>
     
     services.AddSignalR() |> ignore<ISignalRServerBuilder>
+    services.AddLogging(fun configure -> configure.AddConsole() |> ignore<ILoggingBuilder>) |> ignore<IServiceCollection>
     services.AddSingleton<Giraffe.Serialization.Json.IJsonSerializer>(Thoth.Json.Giraffe.ThothSerializer()) |> ignore<IServiceCollection>
 
 let host =
