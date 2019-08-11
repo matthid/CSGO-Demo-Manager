@@ -178,8 +178,11 @@ Target.create "InstallClient" (fun _ ->
     runTool yarnTool "install --frozen-lockfile" __SOURCE_DIRECTORY__
 )
 
-Target.create "Build" (fun _ ->
+Target.create "BuildServer" (fun _ ->
     runDotNet "build" serverPath
+)
+
+Target.create "BuildClient" (fun _ ->
     Shell.regexReplaceInFileWithEncoding
         "let app = \".+\""
        ("let app = \"" + release.NugetVersion + "\"")
@@ -440,7 +443,11 @@ open Fake.Core.TargetOperators
 // Regular Build
 "Clean"
     ==> "InstallClient"
-    ==> "Build"
+    ==> "BuildClient"
+    ==> "ElectronPackages"
+
+"Clean"
+    ==> "BuildServer"
     ==> "PublishServer"
     ==> "ElectronPackages"
 
