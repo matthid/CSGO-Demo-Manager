@@ -32,6 +32,11 @@ let deployDir = Path.getFullName "./deploy"
 
 let release = ReleaseNotes.load "RELEASE_NOTES.md"
 
+BuildServer.install [
+    AppVeyor.Installer
+    TeamFoundation.Installer
+]
+
 let version =
     let segToString = function
         | PreReleaseSegment.AlphaNumeric n -> n
