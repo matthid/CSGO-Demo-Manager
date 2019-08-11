@@ -1,0 +1,18 @@
+# ASP.NET Core (.NET Framework)
+# Build and test ASP.NET Core projects targeting the full .NET Framework.
+# Add steps that publish symbols, save build artifacts, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
+trigger:
+- master
+
+pool:
+  vmImage: 'windows-latest'
+
+steps:
+- task: matthid.fsharp-helpers-extension-private.a2dadf20-1a83-4220-a4ee-b52f6c77f3cf.FAKE5@1
+  displayName: 'Run the Build'
+  inputs:
+    FakeVersion: '5.15.4'
+    ScriptArguments: '--parallel 3 -t Full'
+
