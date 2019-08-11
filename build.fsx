@@ -8,14 +8,19 @@
 
 open System
 
+open Fake.Api
+open Fake.BuildServer
 open Fake.Core
 open Fake.DotNet
 open Fake.IO
 open Fake.IO.Globbing.Operators
+open Fake.Tools
 
 Target.initEnvironment ()
 
 // AppName cannot contain '-', see https://github.com/electron/windows-installer/issues/187
+let githubRepositoryName = "CSGO-Demos-Manager"
+let defaultGitHubUser = "matthid"
 let appName = "csgoDemoManager"
 let winstoreName = "csgo.demo.manager"
 let winstoreDisplayName = "CSGO Demo Manager"
@@ -27,10 +32,52 @@ let deployDir = Path.getFullName "./deploy"
 
 let release = ReleaseNotes.load "RELEASE_NOTES.md"
 
+let version =
+    let segToString = function
+        | PreReleaseSegment.AlphaNumeric n -> n
+        | PreReleaseSegment.Numeric n -> string n
+    let source, buildMeta =
+        match BuildServer.buildServer with
+        // For others see FAKE
+        | BuildServer.TeamFoundation ->
+            let sourceBranch = TeamFoundation.Environment.BuildSourceBranch
+            let isPr = sourceBranch.StartsWith "refs/pull/"
+            let firstSegment =
+                if isPr then
+                    let splits = sourceBranch.Split '/'
+                    let prNum = bigint (int splits.[2])
+                    [ PreReleaseSegment.AlphaNumeric "pr"; PreReleaseSegment.Numeric prNum ]
+                else
+                    []
+            let buildId = bigint (int TeamFoundation.Environment.BuildId)
+            [ yield! firstSegment
+              yield PreReleaseSegment.Numeric buildId
+            ], sprintf "vsts.%s" TeamFoundation.Environment.BuildSourceVersion
+        | _ ->
+            [ PreReleaseSegment.AlphaNumeric "local" ], ""
+
+    let semVer = SemVer.parse release.NugetVersion
+    let prerelease =
+        match semVer.PreRelease with
+        | None -> None
+        | Some p ->
+            let toAdd = System.String.Join(".", source |> Seq.map segToString)
+            let toAdd = if System.String.IsNullOrEmpty toAdd then toAdd else "." + toAdd
+            Some ({p with
+                        Values = p.Values @ source
+                        Origin = p.Origin + toAdd })
+    let fromRepository =
+        match prerelease with
+        | Some _ -> { semVer with PreRelease = prerelease; Original = None; BuildMetaData = buildMeta }
+        | None -> semVer
+
+    match Environment.environVarOrNone "FAKE_VERSION" with
+    | Some ver -> SemVer.parse ver
+    | None -> fromRepository
+
+let simpleVersion = version.AsString
 let fourDigitVersion = 
-    let v = System.Version.Parse release.AssemblyVersion
-    let makeZero i = Math.Max(i, 0)
-    sprintf "%d.%d.%d.%d" (makeZero v.Major) (makeZero v.Minor) (makeZero v.Build) (makeZero v.Revision) 
+    Version(int version.Major, int version.Minor, int version.Patch, 0).ToString()
 
 let platformTool tool winTool =
     let tool = if Environment.isUnix then tool else winTool
@@ -42,9 +89,6 @@ let platformTool tool winTool =
             "Please install it and make sure it's available from your path. " +
             "See https://safe-stack.github.io/docs/quickstart/#install-pre-requisites for more info"
         failwith errorMsg
-
-let nodeTool = platformTool "node" "node.exe"
-let yarnTool = platformTool "yarn" "yarn.cmd"
 
 let runToolWithArgs cmd workingDir args =
     Command.RawCommand (cmd, args |> Arguments.OfArgs)
@@ -70,6 +114,38 @@ let openBrowser url =
     |> CreateProcess.ensureExitCodeWithMessage "opening browser failed"
     |> Proc.run
     |> ignore
+
+let vault =
+    match Vault.fromFakeEnvironmentOrNone() with
+    | Some v -> v
+    | None -> TeamFoundation.variables
+
+let getVarOrDefault name def =
+    match vault.TryGet name with
+    | Some v -> v
+    | None -> Environment.environVarOrDefault name def
+let mutable secrets = []
+let releaseSecret replacement name =
+    let secret =
+        lazy
+            let env = 
+                match getVarOrDefault name "default_unset" with
+                | "default_unset" -> failwithf "variable '%s' is not set" name
+                | s -> s
+            if BuildServer.buildServer <> BuildServer.TeamFoundation then
+                // on TFS/VSTS the build will take care of this.
+                TraceSecrets.register replacement env
+            env
+    secrets <- secret :: secrets
+    secret
+let certPass = releaseSecret "<cert-pw>" "certificate_password"
+let githubtoken = releaseSecret "<githubtoken>" "github_token"
+let github_release_user = getVarOrDefault "github_release_user" defaultGitHubUser
+let artifactsDir = getVarOrDefault "artifactsdirectory" ""
+let fromArtifacts = not <| String.isNullOrEmpty artifactsDir
+
+let nodeTool = platformTool "node" "node.exe"
+let yarnTool = platformTool "yarn" "yarn.cmd"
 
 
 Target.create "Clean" (fun _ ->
@@ -157,14 +233,14 @@ Target.create "ElectronPackages" (fun _ ->
         !! (sprintf "%s/**" packageDir)
         |> Zip.zip packageDir zipFile
 
-        Trace.publish (ImportData.BuildArtifactWithName (sprintf "portable-%s" electron)) zipFile
+        Trace.publish (ImportData.BuildArtifactWithName "portable-files") zipFile
 )
 
+let installerName = sprintf "setup-%s-%s" appName simpleVersion
 Target.create "CreateWinInstaller" (fun _ ->
     // TODO: Set loadingGif, iconUrl
     let escapeSingleQuoteStr (s:string) =
         s.Replace("\\", "\\\\")
-    let installerName = sprintf "setup-%s-%s" appName release.NugetVersion
     // https://github.com/electron/windows-installer
     let code =
         sprintf """(async () => {
@@ -197,6 +273,7 @@ Target.create "CreateWinInstaller" (fun _ ->
 )
 
 Target.create "CreateWinApp" (fun _ ->
+    let windowsKit = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Windows Kits", "10", "bin", "x64")
     // make winstore appx https://github.com/felixrieseberg/electron-windows-store
     [ "--input-directory"; sprintf "./deploy/package/%s-win32-x64" appName
       "--output-directory"; "./deploy/win-store"
@@ -204,7 +281,10 @@ Target.create "CreateWinApp" (fun _ ->
       "--package-name"; winstoreName
       "--package-display-name"; winstoreDisplayName
       "-e"; sprintf "app/%s.exe" appName
-      "--publisher"; "CN=matthid"]    
+      "--publisher"; "CN=matthid"
+      "--windows-kit"; windowsKit
+      "--dev-cert"; Path.getFullName "./publish/publish-files/matthid.pfx"
+      "--cert-pass"; certPass.Value ]    
     |> runToolWithArgs (npmTool "electron-windows-store") __SOURCE_DIRECTORY__
 
     Trace.publish (ImportData.BuildArtifactWithName "windows-app") (sprintf "./deploy/win-store/%s.appx" winstoreName)
@@ -213,29 +293,87 @@ Target.create "CreateWinApp" (fun _ ->
 )
 
 
-Target.create "Full" ignore
+Target.create "CI" ignore
+
+
+Target.create "PrepareArtifacts" (fun _ ->
+    if not fromArtifacts then
+        Trace.trace "empty artifactsDir."
+    else
+        Trace.trace "ensure artifacts."
+        let files =
+            !! (artifactsDir + sprintf "/portable-files/%s-*.zip" appName)
+            |> Seq.toList
+        Trace.tracefn "files: %A" files
+        files
+        |> Shell.copy ("./deploy/package")
+
+        [ (artifactsDir + sprintf "/windows-installer/%s.exe" installerName) ]
+        |> Shell.copy ("./deploy/win-installer")
+
+        [ artifactsDir + sprintf "/windows-app/%s.appx" winstoreName ]
+        |> Shell.copy ("./deploy/win-store")
+)
+
+Target.create "Release_Github" (fun _ ->
+
+    let token = githubtoken.Value
+    let auth = sprintf "%s:x-oauth-basic@" token
+    let url = sprintf "https://%sgithub.com/%s/%s.git" auth github_release_user githubRepositoryName
+
+    let gitDirectory = getVarOrDefault "git_directory" ""
+    if not BuildServer.isLocalBuild then
+        Git.CommandHelper.directRunGitCommandAndFail gitDirectory "config user.email matthi.d@gmail.com"
+        Git.CommandHelper.directRunGitCommandAndFail gitDirectory "config user.name \"Matthias Dittrich\""
+    if gitDirectory <> "" && BuildServer.buildServer = BuildServer.TeamFoundation then
+        Trace.trace "Prepare git directory"
+        Git.Branches.checkout gitDirectory false TeamFoundation.Environment.BuildSourceVersion
+    else
+        Git.Staging.stageAll gitDirectory
+        Git.Commit.exec gitDirectory (sprintf "Bump version to %s" simpleVersion)
+        let branch = Git.Information.getBranchName gitDirectory
+        Git.Branches.pushBranch gitDirectory "origin" branch
+
+    Git.Branches.tag gitDirectory simpleVersion
+    Git.Branches.pushTag gitDirectory url simpleVersion
+
+    let files =
+        !! "./deploy/package/*.zip" |> Seq.toList
+        |> List.append [ sprintf "./deploy/win-installer/%s.exe" installerName; sprintf "./deploy/win-store/%s.appx" winstoreName ]
+
+    GitHub.createClientWithToken token
+    |> GitHub.draftNewRelease github_release_user githubRepositoryName simpleVersion (release.SemVer.PreRelease <> None) release.Notes
+    |> GitHub.uploadFiles files
+    |> GitHub.publishDraft
+    |> Async.RunSynchronously
+)
 
 open Fake.Core.TargetOperators
 
+// Regular Build
 "Clean"
     ==> "InstallClient"
     ==> "Build"
     ==> "PublishServer"
     ==> "ElectronPackages"
 
+// CI Build
 "ElectronPackages"
     ==> "CreateWinInstaller"
 "ElectronPackages"
     ==> "CreateWinApp"
 
 "CreateWinInstaller"
-    ==> "Full"
+    ==> "CI"
 "CreateWinApp"
-    ==> "Full"
+    ==> "CI"
 
+// Release - Deployment State
+(if fromArtifacts then "PrepareArtifacts" else "CI")
+    ==> "Release_Github"
 
 "Clean"
     ==> "InstallClient"
     ==> "Run"
 
-Target.runOrDefaultWithArguments "Full"
+Target.runOrDefaultWithArguments "ElectronPackages"

@@ -1,18 +1,54 @@
-# ASP.NET Core (.NET Framework)
-# Build and test ASP.NET Core projects targeting the full .NET Framework.
-# Add steps that publish symbols, save build artifacts, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+# Build and Release Pipeline
 
 trigger:
 - master
+- release/next
 
-pool:
-  vmImage: 'windows-latest'
+pr:
+- master
+- release/next
 
-steps:
-- task: matthid.fsharp-helpers-extension-private.a2dadf20-1a83-4220-a4ee-b52f6c77f3cf.FAKE5@1
-  displayName: 'Run the Build'
-  inputs:
-    FakeVersion: '5.15.4'
-    ScriptArguments: '--parallel 3 -t Full'
+stages:
+- stage: CI
+  dependsOn: []
+  jobs:
+  - job: CI
+    pool:
+      vmImage: 'windows-latest'
+    continueOnError: false
+    steps:
+    - task: matthid.fsharp-helpers-extension-private.a2dadf20-1a83-4220-a4ee-b52f6c77f3cf.FAKE5@1
+      displayName: 'Run the CI Build'
+      inputs:
+        FakeVersion: '5.15.4'
+        ScriptArguments: '--parallel 3 -t CI'
+- stage: Release_Github
+  dependsOn: [ "CI" ]
+  environment: 'GitHub Release'
+  # condition: and(succeeded(), eq(variables['build.sourceBranch'], 'refs/heads/master'))
+  jobs:
+  #- job: ManualIntervention
+  #  pool: server
+  #  steps:
+  #  - task: ManualIntervention@8
+  #    inputs:
+  #      instructions: 'Please approve in order to deploy as GitHub Release'
+  - job: Deploy
+    pool:
+      vmImage: 'windows-latest'
+    continueOnError: false
+    variables:
+      artifactsdirectory: $(Pipeline.Workspace)
+    steps:
+    - download: current
+      artifact: windows-app
+    - download: current
+      artifact: windows-installer
+    - download: current
+      artifact: portable-files
+    - task: matthid.fsharp-helpers-extension-private.a2dadf20-1a83-4220-a4ee-b52f6c77f3cf.FAKE5@1
+      displayName: 'Run the Github Release'
+      inputs:
+        FakeVersion: '5.15.4'
+        ScriptArguments: '--parallel 3 -t Release_Github'
 

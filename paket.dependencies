@@ -31,9 +31,15 @@ group Build
     storage: none
 
     nuget FSharp.Core
+    nuget Fake.Api.GitHub
+    nuget Fake.BuildServer.AppVeyor
+    //nuget Fake.BuildServer.Travis
+    nuget Fake.BuildServer.TeamFoundation
     nuget Fake.Core.ReleaseNotes
     nuget Fake.Core.Target
+    nuget Fake.Core.Vault
     nuget Fake.DotNet.Cli
     nuget Fake.IO.Zip
     nuget Fake.IO.FileSystem
+    nuget Fake.Tools.Git
 
