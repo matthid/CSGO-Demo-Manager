@@ -32,7 +32,7 @@ stages:
   #  - task: ManualIntervention@8
   #    inputs:
   #      instructions: 'Please approve in order to deploy as GitHub Release'
-  - deployment: deploy-github-release
+  - deployment: deploy_github_release
     displayName: deploy to Github Releases
     pool:
       vmImage: 'windows-latest'
