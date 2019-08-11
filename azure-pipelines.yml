@@ -50,15 +50,14 @@ stages:
       inputs:
         FakeVersion: '5.15.4'
         ScriptArguments: '--parallel 3 -t CI'
-- stage: Release_Github
+- stage: Github_Release
   dependsOn: [ "CI" ]
   jobs:
   - deployment: deploy_github_release
     displayName: deploy to Github Releases
     pool:
       vmImage: 'windows-latest'
-    # creates an environment if it doesn't exist
-    environment: 'github-release'
+    environment: 'csgo-demo-manager-github-release'
     continueOnError: false
     variables:
       artifactsdirectory: $(Pipeline.Workspace)
