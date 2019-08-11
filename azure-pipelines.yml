@@ -11,6 +11,7 @@ pr:
 variables:
   YARN_CACHE_FOLDER: $(Pipeline.Workspace)/.cache/yarn
   NUGET_PACKAGES: $(Pipeline.Workspace)/.cache/nuget
+  create_certificate: true
 stages:
 - stage: CI
   dependsOn: []
@@ -34,7 +35,16 @@ stages:
           $(Build.SourcesDirectory)/paket.lock
         path: $(NUGET_PACKAGES)
       displayName: 'Cache NuGet'
- 
+    - task: DownloadSecureFile@1
+      name: codesign
+      condition: and(succeeded(), of(eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['Build.SourceBranch'], 'refs/heads/release/next')))
+      displayName: 'Download Code Sign certificate'
+      inputs:
+        secureFile: 'codesign.pfx'
+    - bash: echo "##vso[task.setvariable variable=certificate_file;]$(codesign.secureFilePath)"
+      condition: and(succeeded(), of(eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['Build.SourceBranch'], 'refs/heads/release/next')))
+    - bash: echo "##vso[task.setvariable variable=create_certificate;]false"
+      condition: and(succeeded(), of(eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['Build.SourceBranch'], 'refs/heads/release/next')))
     - task: matthid.fsharp-helpers-extension-private.a2dadf20-1a83-4220-a4ee-b52f6c77f3cf.FAKE5@1
       displayName: 'Run the CI Build'
       inputs:
@@ -76,6 +86,12 @@ stages:
                 $(Build.SourcesDirectory)/paket.lock
               path: $(NUGET_PACKAGES)
             displayName: 'Cache NuGet'
+          - task: DownloadSecureFile@1
+            name: codesign
+            displayName: 'Download Code Sign certificate'
+            inputs:
+              secureFile: 'codesign.pfx'
+          - bash: echo "##vso[task.setvariable variable=certificate_file;]$(codesign.secureFilePath)"
           - task: matthid.fsharp-helpers-extension-private.a2dadf20-1a83-4220-a4ee-b52f6c77f3cf.FAKE5@1
             displayName: 'Run the Github Release'
             inputs:

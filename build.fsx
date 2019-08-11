@@ -7,6 +7,7 @@
 #endif
 
 open System
+open System.IO
 
 open Fake.Api
 open Fake.BuildServer
@@ -144,6 +145,8 @@ let releaseSecret replacement name =
     secrets <- secret :: secrets
     secret
 let certPass = releaseSecret "<cert-pw>" "certificate_password"
+let certFile = getVarOrDefault "certificate_file" ""
+let createCertificate = getVarOrDefault "create_certificate" "true" = "true"
 let githubtoken = releaseSecret "<githubtoken>" "github_token"
 let github_release_user = getVarOrDefault "github_release_user" defaultGitHubUser
 let artifactsDir = getVarOrDefault "artifactsdirectory" ""
@@ -277,6 +280,14 @@ Target.create "CreateWinInstaller" (fun _ ->
     Trace.publish (ImportData.BuildArtifactWithName "windows-installer") (sprintf "./deploy/win-installer/%s" installerName)
 )
 
+let openSSLPath =
+    let OpenSSLPath = @"[ProgramFiles]\Git\usr\bin\;[ProgramFilesX86]\Git\usr\bin\;"
+    if Environment.isUnix then
+        "openssl"
+    else
+        let ev = Environment.environVar "OPENSSL"
+        if not (String.isNullOrEmpty ev) then ev else Process.findPath "OpenSSLPath" OpenSSLPath "openssl.exe"
+
 Target.create "CreateWinApp" (fun _ ->
     let sortArch s =
         match s with
@@ -321,6 +332,24 @@ Target.create "CreateWinApp" (fun _ ->
         match windowsKit with
         | Some (_, k) -> k
         | None -> failwithf "could not find a Windows 10 SDK, please install it (required for creating a windows app)"
+    // Create cert if required
+    let cert, certPw =
+        if createCertificate then
+            let dir = IO.Path.GetFullPath "./publish/certs/gen"
+            Directory.ensure dir
+            // https://blog.didierstevens.com/2008/12/30/howto-make-your-own-cert-with-openssl/
+            if not (File.Exists "./publish/certs/gen/codesign.key") then // create CA key 
+                runTool openSSLPath "genrsa -out codesign.key 4096" dir
+            if not (File.Exists "./publish/certs/gen/codesign.crt") then // self sign CA
+                // https://www.ibm.com/support/knowledgecenter/en/SSB23S_1.1.0.13/gtps7/cfgcert.html
+                runTool openSSLPath "req -new -x509 -config ../codesign.cfg -key codesign.key -out codesign.crt" dir
+            if not (File.Exists "./publish/certs/gen/codesign.pfx") then
+                // https://stackoverflow.com/questions/22327160/enter-export-password-to-generate-a-p12-certificate/22328260#22328260
+                // https://www.ssl.com/how-to/create-a-pfx-p12-certificate-file-using-openssl/
+                runTool openSSLPath "pkcs12 -export -out codesign.pfx -inkey codesign.key -in codesign.crt -password pass:test123" dir
+            "./publish/certs/gen/codesign.pfx", "test123"
+        else certFile, certPass.Value       
+    
     // make winstore appx https://github.com/felixrieseberg/electron-windows-store
     [ "--input-directory"; sprintf "./deploy/package/%s-win32-x64" appName
       "--output-directory"; "./deploy/win-store"
@@ -328,10 +357,10 @@ Target.create "CreateWinApp" (fun _ ->
       "--package-name"; winstoreName
       "--package-display-name"; winstoreDisplayName
       "-e"; sprintf "app/%s.exe" appName
-      "--publisher"; "CN=matthid"
+      "--publisher"; "CN=matthid.de"
       "--windows-kit"; windowsKit
-      "--dev-cert"; Path.getFullName "./publish/publish-files/matthid.pfx"
-      "--cert-pass"; certPass.Value ]    
+      "--dev-cert"; Path.getFullName cert
+      "--cert-pass"; certPw ]    
     |> runToolWithArgs (npmTool "electron-windows-store") __SOURCE_DIRECTORY__
 
     Trace.publish (ImportData.BuildArtifactWithName "windows-app") (sprintf "./deploy/win-store/%s.appx" winstoreName)
