@@ -408,18 +408,18 @@ Target.create "Release_Github" (fun _ ->
     let auth = sprintf "%s:x-oauth-basic@" token
     let url = sprintf "https://%sgithub.com/%s/%s.git" auth github_release_user githubRepositoryName
 
-    let gitDirectory = getVarOrDefault "git_directory" ""
+    let gitDirectory = "" // getVarOrDefault "git_directory" ""
     if not BuildServer.isLocalBuild then
         Git.CommandHelper.directRunGitCommandAndFail gitDirectory "config user.email matthi.d@gmail.com"
         Git.CommandHelper.directRunGitCommandAndFail gitDirectory "config user.name \"Matthias Dittrich\""
-    if gitDirectory <> "" && BuildServer.buildServer = BuildServer.TeamFoundation then
-        Trace.trace "Prepare git directory"
-        Git.Branches.checkout gitDirectory false TeamFoundation.Environment.BuildSourceVersion
-    else
-        Git.Staging.stageAll gitDirectory
-        Git.Commit.exec gitDirectory (sprintf "Bump version to %s" simpleVersion)
-        let branch = Git.Information.getBranchName gitDirectory
-        Git.Branches.pushBranch gitDirectory "origin" branch
+    //if gitDirectory <> "" && BuildServer.buildServer = BuildServer.TeamFoundation then
+    //    Trace.trace "Prepare git directory"
+    //    Git.Branches.checkout gitDirectory false TeamFoundation.Environment.BuildSourceVersion
+    //else
+    //    Git.Staging.stageAll gitDirectory
+    //    Git.Commit.exec gitDirectory (sprintf "Bump version to %s" simpleVersion)
+    //    let branch = Git.Information.getBranchName gitDirectory
+    //    Git.Branches.pushBranch gitDirectory "origin" branch
 
     Git.Branches.tag gitDirectory simpleVersion
     Git.Branches.pushTag gitDirectory url simpleVersion
