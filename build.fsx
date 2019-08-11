@@ -355,8 +355,11 @@ Target.create "CreateWinApp" (fun _ ->
                 // https://stackoverflow.com/questions/22327160/enter-export-password-to-generate-a-p12-certificate/22328260#22328260
                 // https://www.ssl.com/how-to/create-a-pfx-p12-certificate-file-using-openssl/
                 runTool openSSLPath "pkcs12 -export -out codesign.pfx -inkey codesign.key -in codesign.crt -password pass:test123" dir
+            printfn "Using locally created certificate"
             "./publish/certs/gen/codesign.pfx", "test123"
-        else certFile, certPass.Value       
+        else 
+            printfn "Using certificate provided via parameters"
+            certFile, certPass.Value       
     
     // make winstore appx https://github.com/felixrieseberg/electron-windows-store
     [ "--input-directory"; sprintf "./deploy/package/%s-win32-x64" appName
