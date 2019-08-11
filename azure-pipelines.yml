@@ -8,6 +8,9 @@ pr:
 - master
 - release/next
 
+variables:
+  YARN_CACHE_FOLDER: $(Pipeline.Workspace)/.cache/yarn
+  NUGET_PACKAGES: $(Pipeline.Workspace)/.cache/nuget
 stages:
 - stage: CI
   dependsOn: []
@@ -17,6 +20,21 @@ stages:
       vmImage: 'windows-latest'
     continueOnError: false
     steps:
+    - task: CacheBeta@0
+      inputs:
+        key: |
+          $(Agent.OS)
+          $(Build.SourcesDirectory)/yarn.lock
+        path: $(Pipeline.Workspace)/.cache/yarn
+      displayName: 'Cache yarn'
+    - task: CacheBeta@0
+      inputs:
+        key: |
+          $(Agent.OS)
+          $(Build.SourcesDirectory)/paket.lock
+        path: $(NUGET_PACKAGES)
+      displayName: 'Cache NuGet'
+ 
     - task: matthid.fsharp-helpers-extension-private.a2dadf20-1a83-4220-a4ee-b52f6c77f3cf.FAKE5@1
       displayName: 'Run the CI Build'
       inputs:
@@ -51,6 +69,13 @@ stages:
             artifact: windows-installer
           - download: current
             artifact: portable-files
+          - task: CacheBeta@0
+            inputs:
+              key: |
+                $(Agent.OS)
+                $(Build.SourcesDirectory)/paket.lock
+              path: $(NUGET_PACKAGES)
+            displayName: 'Cache NuGet'
           - task: matthid.fsharp-helpers-extension-private.a2dadf20-1a83-4220-a4ee-b52f6c77f3cf.FAKE5@1
             displayName: 'Run the Github Release'
             inputs:

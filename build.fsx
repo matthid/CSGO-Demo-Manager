@@ -273,7 +273,49 @@ Target.create "CreateWinInstaller" (fun _ ->
 )
 
 Target.create "CreateWinApp" (fun _ ->
-    let windowsKit = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Windows Kits", "10", "bin", "x64")
+    let sortArch s =
+        match s with
+        | "x64" -> 10
+        | "x86" -> 9
+        | _ -> 0
+    let pf86 = Environment.GetEnvironmentVariable("ProgramW6432")
+    let programFiles =
+        [ if not (System.String.IsNullOrEmpty pf86) then
+            yield pf86
+          yield Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
+          yield Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86) ]
+        |> List.map IO.Path.GetFullPath
+        |> List.distinct
+
+    let windowsKit =
+        programFiles
+        |> Seq.map (fun p -> System.IO.Path.Combine(p, "Windows Kits", "10", "bin"))
+        |> Seq.filter (System.IO.Directory.Exists)
+        |> Seq.collect (fun p -> !! (p + "/*/*/makeappx.exe") |> Seq.toList)
+        |> Seq.map (System.IO.Path.GetDirectoryName)
+        |> Seq.groupBy (fun archDir ->
+            let arch = IO.Path.GetFileName archDir
+            let versionDir = System.IO.Path.GetDirectoryName archDir
+            let version = IO.Path.GetFileName versionDir
+            arch, version)
+        |> Seq.map (fun ((arch, version), dir) ->
+            match dir |> Seq.toList with
+            | [ dir ] -> (arch, version), dir 
+            | [] -> failwithf "(impossible) no dir for arch %s and version %s" arch version
+            | dirs -> failwithf "(impossible) multiple dirs for arch %s and version %s: %A" arch version dirs)
+        |> Seq.choose (fun ((arch, version), dir) ->
+            match Version.TryParse version with
+            | true, v -> Some((arch, v), dir)
+            | _ -> 
+                eprintfn "Ignoring '%s' folder in windows kits as '%s' could not be parsed to a version" dir version 
+                None)
+        |> Seq.sortByDescending (fun ((arch, version), dir) -> version, sortArch arch)
+        |> Seq.tryHead
+        
+    let windowsKit =
+        match windowsKit with
+        | Some (_, k) -> k
+        | None -> failwithf "could not find a Windows 10 SDK, please install it (required for creating a windows app)"
     // make winstore appx https://github.com/felixrieseberg/electron-windows-store
     [ "--input-directory"; sprintf "./deploy/package/%s-win32-x64" appName
       "--output-directory"; "./deploy/win-store"
