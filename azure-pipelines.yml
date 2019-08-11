@@ -32,23 +32,28 @@ stages:
   #  - task: ManualIntervention@8
   #    inputs:
   #      instructions: 'Please approve in order to deploy as GitHub Release'
-  - job: Deploy
+  - deployment: deploy-github-release
+    displayName: deploy to Github Releases
     pool:
       vmImage: 'windows-latest'
+    # creates an environment if it doesn't exist
+    environment: 'github-release'
     continueOnError: false
-    environment: 'GitHub Release'
     variables:
       artifactsdirectory: $(Pipeline.Workspace)
-    steps:
-    - download: current
-      artifact: windows-app
-    - download: current
-      artifact: windows-installer
-    - download: current
-      artifact: portable-files
-    - task: matthid.fsharp-helpers-extension-private.a2dadf20-1a83-4220-a4ee-b52f6c77f3cf.FAKE5@1
-      displayName: 'Run the Github Release'
-      inputs:
-        FakeVersion: '5.15.4'
-        ScriptArguments: '--parallel 3 -t Release_Github'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: windows-app
+          - download: current
+            artifact: windows-installer
+          - download: current
+            artifact: portable-files
+          - task: matthid.fsharp-helpers-extension-private.a2dadf20-1a83-4220-a4ee-b52f6c77f3cf.FAKE5@1
+            displayName: 'Run the Github Release'
+            inputs:
+              FakeVersion: '5.15.4'
+              ScriptArguments: '--parallel 3 -t Release_Github'
 
