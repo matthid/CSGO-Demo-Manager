@@ -2,6 +2,10 @@
 
 This template can be used to generate a full-stack web application using the [SAFE Stack](https://safe-stack.github.io/). It was created using the dotnet [SAFE Template](https://safe-stack.github.io/docs/template-overview/). If you want to learn more about the template why not start with the [quick start](https://safe-stack.github.io/docs/quickstart/) guide?
 
+[![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/hovfcptp9q0xa6em/branch/master?svg=true)](https://ci.appveyor.com/project/matthid/csgo-demos-manager/branch/master)
+
+[![Azure DevOps Build Status](https://dev.azure.com/fakebuild/FSProjects/_apis/build/status/matthid.CSGO-Demos-Manager?branchName=master)](https://dev.azure.com/fakebuild/FSProjects/_build/latest?definitionId=6&branchName=master)
+
 ## Install pre-requisites
 
 You'll need to install the following pre-requisites in order to build CSGO Demo Manager
