@@ -82,6 +82,14 @@ let version =
     | None -> fromRepository
 
 let simpleVersion = version.AsString
+
+let nugetVersion =
+    if System.String.IsNullOrEmpty version.BuildMetaData
+    then version.AsString
+    else sprintf "%s+%s" version.AsString version.BuildMetaData
+
+Trace.setBuildNumber nugetVersion
+
 let fourDigitVersion = 
     Version(int version.Major, int version.Minor, int version.Patch, 0).ToString()
 
