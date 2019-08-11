@@ -285,7 +285,7 @@ Target.create "CreateWinInstaller" (fun _ ->
     [ "-e"; code ]
     |> runToolWithArgs nodeTool __SOURCE_DIRECTORY__
 
-    Trace.publish (ImportData.BuildArtifactWithName "windows-installer") (sprintf "./deploy/win-installer/%s" installerName)
+    Trace.publish (ImportData.BuildArtifactWithName "windows-installer") (sprintf "./deploy/win-installer/%s.exe" installerName)
 )
 
 let openSSLPath =
