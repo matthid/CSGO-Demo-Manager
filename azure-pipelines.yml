@@ -24,7 +24,6 @@ stages:
         ScriptArguments: '--parallel 3 -t CI'
 - stage: Release_Github
   dependsOn: [ "CI" ]
-  environment: 'GitHub Release'
   # condition: and(succeeded(), eq(variables['build.sourceBranch'], 'refs/heads/master'))
   jobs:
   #- job: ManualIntervention
@@ -37,6 +36,7 @@ stages:
     pool:
       vmImage: 'windows-latest'
     continueOnError: false
+    environment: 'GitHub Release'
     variables:
       artifactsdirectory: $(Pipeline.Workspace)
     steps:
