@@ -217,10 +217,6 @@ Target.create "Run" (fun _ ->
     |> ignore
 )
 
-let npmTool tool =
-    let ext = if Environment.isWindows then ".cmd" else ""
-    sprintf "./node_modules/.bin/%s%s" tool ext
-
 Target.create "PublishServer" (fun _ ->
     let rids = [ "win-x64"; "osx-x64"; "linux-x64" ]
     for r in rids do
@@ -230,8 +226,8 @@ Target.create "PublishServer" (fun _ ->
 )
 
 Target.create "ElectronPackages" (fun _ ->
-    [ "./publish"; appName; "--platform"; "win32,linux,darwin"; "--arch"; "x64"; "--out"; "./deploy/package"]    
-    |> runToolWithArgs (npmTool "electron-packager") __SOURCE_DIRECTORY__
+    [ "run"; "electron-packager"; "./publish"; appName; "--platform"; "win32,linux,darwin"; "--arch"; "x64"; "--out"; "./deploy/package"]    
+    |> runToolWithArgs yarnTool __SOURCE_DIRECTORY__
 
     // Cleanup & zip packages (as we don't need to bundle all binaries)
     let toCleanup =
@@ -365,7 +361,8 @@ Target.create "CreateWinApp" (fun _ ->
             certFile, certPass.Value       
     
     // make winstore appx https://github.com/felixrieseberg/electron-windows-store
-    [ "--input-directory"; sprintf "./deploy/package/%s-win32-x64" appName
+    [ "run"; "electron-windows-store"
+      "--input-directory"; sprintf "./deploy/package/%s-win32-x64" appName
       "--output-directory"; "./deploy/win-store"
       "--package-version"; fourDigitVersion
       "--package-name"; winstoreName
@@ -375,7 +372,7 @@ Target.create "CreateWinApp" (fun _ ->
       "--windows-kit"; windowsKit
       "--dev-cert"; Path.getFullName cert
       "--cert-pass"; certPw ]    
-    |> runToolWithArgs (npmTool "electron-windows-store") __SOURCE_DIRECTORY__
+    |> runToolWithArgs yarnTool __SOURCE_DIRECTORY__
 
     Trace.publish (ImportData.BuildArtifactWithName "windows-app") (sprintf "./deploy/win-store/%s.appx" winstoreName)
 
