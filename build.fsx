@@ -226,8 +226,10 @@ Target.create "PublishServer" (fun _ ->
 )
 
 Target.create "ElectronPackages" (fun _ ->
+    Environment.setEnvironVar "DEBUG" "*"
     [ "run"; "electron-packager"; "./publish"; appName; "--platform"; "win32,linux,darwin"; "--arch"; "x64"; "--out"; "./deploy/package"]    
     |> runToolWithArgs yarnTool __SOURCE_DIRECTORY__
+    Environment.setEnvironVar "DEBUG" null
 
     // Cleanup & zip packages (as we don't need to bundle all binaries)
     let toCleanup =
