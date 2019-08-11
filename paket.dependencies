@@ -1,3 +1,4 @@
+version 5.215.0
 group Server
     source https://api.nuget.org/v3/index.json
     framework: netcoreapp2.2
@@ -30,7 +31,7 @@ group Build
     framework: netstandard2.0
     storage: none
 
-    nuget FSharp.Core
+    nuget FSharp.Core ~> 4.6.0
     nuget Fake.Api.GitHub
     nuget Fake.BuildServer.AppVeyor
     //nuget Fake.BuildServer.Travis
