@@ -1,5 +1,5 @@
 {
-    "name": "csgo-demos-manager",
+    "name": "csgoDemoManager",
     "version": "1.0.0",
     "description": "CSGO Demos Manager is an application to manage replays from the game Counter-Strike: Global Offensive.",
     "main": "main.js",

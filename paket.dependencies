@@ -34,5 +34,6 @@ group Build
     nuget Fake.Core.ReleaseNotes
     nuget Fake.Core.Target
     nuget Fake.DotNet.Cli
+    nuget Fake.IO.Zip
     nuget Fake.IO.FileSystem
 
