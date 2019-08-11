@@ -52,14 +52,7 @@ stages:
         ScriptArguments: '--parallel 3 -t CI'
 - stage: Release_Github
   dependsOn: [ "CI" ]
-  # condition: and(succeeded(), eq(variables['build.sourceBranch'], 'refs/heads/master'))
   jobs:
-  #- job: ManualIntervention
-  #  pool: server
-  #  steps:
-  #  - task: ManualIntervention@8
-  #    inputs:
-  #      instructions: 'Please approve in order to deploy as GitHub Release'
   - deployment: deploy_github_release
     displayName: deploy to Github Releases
     pool:
