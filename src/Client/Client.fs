@@ -33,7 +33,7 @@ type Msg =
 let retryTimeout = 5000
 let signalR =
     SignalR.signalr.HubConnectionBuilder.Create()
-        .withUrl("/socket/notifications")
+        .withUrl(Backend.getUrl "/socket/notifications")
         .configureLogging(SignalR.LogLevel.Information)
         .build()
 let startSignalRConnection (connection:SignalR.HubConnection) (onConnected: bool -> unit) =

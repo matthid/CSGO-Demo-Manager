@@ -98,11 +98,19 @@ type MyDemoService(logger:ILogger<MyDemoService>, cache : ICacheService, steam:I
 let tryGetEnv = System.Environment.GetEnvironmentVariable >> function null | "" -> None | x -> Some x
 
 let publicPath =
-    let t1 = Path.GetFullPath "../Client/deploy"
-    let t2 = Path.GetFullPath "./Client"
-    let t3 = Path.GetFullPath "./Client/deploy"
-    let all = [ t1; t2; t3 ]
+    let t0 = "../Client/deploy" // dev workdir
+    let t1 = "./Client/deploy" // workdir convenience
+    let t2 = "../../Client" // electron deployment (relative to assembly)
+    let t3 = "./Client" // workdir/deployment convenience
+    let tests = [ t0; t1; t2; t3 ]
+    let loc = Path.GetDirectoryName typeof<INotificationService>.Assembly.Location
+    let all =
+        tests
+        |> List.collect (fun rel ->
+            [ rel
+              Path.Combine(loc, rel) ])
     all
+    |> Seq.map Path.GetFullPath
     |> Seq.tryFind (fun p ->
         File.Exists (Path.Combine(p, "index.html")))
     |> Option.defaultWith (fun () ->

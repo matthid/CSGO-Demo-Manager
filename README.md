@@ -20,6 +20,11 @@ To concurrently run the server and the client components in watch mode use the f
 fake build -t Run
 ```
 
+## Build package
+
+```bash
+fake build -t CreateInstaller
+```
 
 ## Components Documentation
 
@@ -48,7 +53,6 @@ Original Demo Manager
 
 ## TODOs
 
-- Warn when CSGO is open (MM Download)
 - Improve performance of MM download
 - Windows Installer
 - Download MM demos after CSGO is closed
@@ -59,3 +63,4 @@ Original Demo Manager
 - Watch details page/popup -> Launch CSGO
 - Heatmap
 - Make columns customizable
+- Warn when CSGO is open (MM Download)

@@ -36,14 +36,17 @@ let platformTool tool winTool =
 let nodeTool = platformTool "node" "node.exe"
 let yarnTool = platformTool "yarn" "yarn.cmd"
 
-let runTool cmd args workingDir =
-    let arguments = args |> String.split ' ' |> Arguments.OfArgs
-    Command.RawCommand (cmd, arguments)
+let runToolWithArgs cmd workingDir args =
+    Command.RawCommand (cmd, args |> Arguments.OfArgs)
     |> CreateProcess.fromCommand
     |> CreateProcess.withWorkingDirectory workingDir
     |> CreateProcess.ensureExitCode
     |> Proc.run
     |> ignore
+
+let runTool cmd args workingDir =
+    let arguments = args |> String.split ' '
+    runToolWithArgs cmd workingDir arguments
 
 let runDotNet cmd workingDir =
     let result =
@@ -111,7 +114,18 @@ Target.create "Run" (fun _ ->
 
 
 
-
+Target.create "CreateInstaller" (fun _ ->
+    let rids = [ "win-x64"; "osx-x64"; "linux-x64" ]
+    for r in rids do
+        let outDir = Path.getFullName (sprintf "./publish/Server/%s" r)
+        let args = sprintf "publish -r %s -o \"%s\"" r outDir
+        runDotNet args serverPath
+    let npmTool tool =
+        let ext = if Environment.isWindows then ".cmd" else ""
+        sprintf "./node_modules/.bin/%s%s" tool ext
+    [ "./publish"; "csgo-demo-manager"; "--all"; "--out"; "./deploy"]    
+    |> runToolWithArgs (npmTool "electron-packager") __SOURCE_DIRECTORY__
+)
 
 
 open Fake.Core.TargetOperators
@@ -119,6 +133,7 @@ open Fake.Core.TargetOperators
 "Clean"
     ==> "InstallClient"
     ==> "Build"
+    ==> "CreateInstaller"
 
 
 "Clean"
