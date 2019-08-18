@@ -27,11 +27,51 @@ module LogEvents =
 type INotificationService =
     abstract SendNotification : notification:Notification -> Task
 
+type DemoSortingField =
+    | Date
+    | Name
+    | HostName
+    | Duration
+
+type DemoPageRequest = {
+    StartItem : int
+    MaxItems : int
+    Field: DemoSortingField
+    Desc: bool
+}
+
 type IMyDemoService =
     abstract member Cache : Async<IReadOnlyCollection<Core.Models.Demo>> with get
+    abstract member GetDemoPage : req:DemoPageRequest -> Async<DemoData>
+    abstract member GetDemoPageMongo : req:DemoPageRequest -> Async<DemoData>
     abstract member StartMMDownload : CancellationToken -> unit
-    
-type MyDemoService(logger:ILogger<MyDemoService>, cache : ICacheService, steam:ISteamService, notifications:INotificationService, demoService:IDemosService) =
+   
+module Seq =
+    let tryTake (n : int) (s : _ seq) =
+        seq {
+            use e = s.GetEnumerator ()
+            let mutable i = 0
+            while e.MoveNext () && i < n do
+                i <- i + 1
+                yield e.Current
+        }
+    let trySkip (n : int) (s : _ seq) =
+        seq {
+            use e = s.GetEnumerator ()
+            let mutable i = 0
+            let mutable dataAvailable = e.MoveNext ()
+            while dataAvailable && i < n do
+                dataAvailable <- e.MoveNext ()
+                i <- i + 1
+            if dataAvailable then
+                yield e.Current
+                while e.MoveNext () do
+                    yield e.Current
+        }
+ 
+type MyDemoService(logger:ILogger<MyDemoService>, cache : ICacheService, 
+                   steam:ISteamService, notifications:INotificationService, demoService:IDemosService,
+                   data :Data.IMongoDataStore) =
     do Core.Logger.CoreInstance <- logger
     let demos = cache.GetDemoListAsync()
     do demoService.DownloadFolderPath <-
@@ -69,7 +109,29 @@ type MyDemoService(logger:ILogger<MyDemoService>, cache : ICacheService, steam:I
                     let! de = demos |> Async.AwaitTask
                     return de :> IReadOnlyCollection<_>
                 }
-
+        member x.GetDemoPage req =
+            async {
+                let! demos = demos |> Async.AwaitTask
+                let sortFunc proj s = s |> (if req.Desc then Seq.sortByDescending proj else Seq.sortBy proj)
+                let sortedDemos =
+                    match req.Field with
+                    | DemoSortingField.Date -> demos |> sortFunc (fun d -> d.Date)
+                    | DemoSortingField.Name ->  demos |> sortFunc (fun d -> d.Name)
+                    | DemoSortingField.HostName -> demos |> sortFunc (fun d -> d.Hostname)
+                    | DemoSortingField.Duration -> demos |> sortFunc (fun d -> d.Duration)
+                    
+                
+                printfn "Have %d demos, skipping %d and taking %d" demos.Count req.StartItem req.MaxItems
+                let demoData =
+                    { Demos = sortedDemos |> Seq.trySkip req.StartItem |> Seq.tryTake req.MaxItems |> Seq.map ConvertToShared.ofDemo |> List.ofSeq
+                      Pages = demos.Count / req.MaxItems + (if demos.Count % req.MaxItems = 0 then 0 else 1) }
+                return demoData                  
+            }
+        member x.GetDemoPageMongo req =
+            async {
+                // data.FindDemoPage()
+                return failwithf "test"
+            }
         member x.StartMMDownload (ct:CancellationToken) =
             task {
                 if not (Directory.Exists demoService.DownloadFolderPath) then
@@ -115,32 +177,10 @@ let publicPath =
         File.Exists (Path.Combine(p, "index.html")))
     |> Option.defaultWith (fun () ->
         failwithf "Could not find client directory, tried %A" all)    
+
 let port =
     "SERVER_PORT"
     |> tryGetEnv |> Option.map uint16 |> Option.defaultValue 8085us
-
-module Seq =
-    let tryTake (n : int) (s : _ seq) =
-        seq {
-            use e = s.GetEnumerator ()
-            let mutable i = 0
-            while e.MoveNext () && i < n do
-                i <- i + 1
-                yield e.Current
-        }
-    let trySkip (n : int) (s : _ seq) =
-        seq {
-            use e = s.GetEnumerator ()
-            let mutable i = 0
-            let mutable dataAvailable = e.MoveNext ()
-            while dataAvailable && i < n do
-                dataAvailable <- e.MoveNext ()
-                i <- i + 1
-            if dataAvailable then
-                yield e.Current
-                while e.MoveNext () do
-                    yield e.Current
-        }
 
 
 
@@ -172,21 +212,17 @@ let webApp =
                     let desc =
                         let t = ctx.Request.Query.["desc"]
                         if t.Count > 0 then bool.Parse t.[0] else true
+                    let sortField =
+                        match sortBy with
+                        | "Date" -> DemoSortingField.Date
+                        | "Name" -> DemoSortingField.Name
+                        | "Hostname" -> DemoSortingField.HostName
+                        | "Duration" -> DemoSortingField.Duration
+                        | _ -> failwithf "unknown sort column '%s'" sortBy
+                    let req = { StartItem = startItem; MaxItems = maxItems; Field = sortField; Desc = desc }
 
                     let cache = ctx.GetService<IMyDemoService>()
-                    let! demos = cache.Cache
-                    let sortFunc proj s = s |> (if desc then Seq.sortByDescending proj else Seq.sortBy proj)
-                    let sortedDemos =
-                        match sortBy with
-                        | "Date" -> demos |> sortFunc (fun d -> d.Date)
-                        | "Name" ->  demos |> sortFunc (fun d -> d.Name)
-                        | "Hostname" -> demos |> sortFunc (fun d -> d.Hostname)
-                        | "Duration" -> demos |> sortFunc (fun d -> d.Duration)
-                        | _ -> failwithf "unknown sort column '%s'" sortBy
-                    printfn "Have %d demos, skipping %d and taking %d" demos.Count startItem maxItems
-                    let demoData =
-                        { Demos = sortedDemos |> Seq.trySkip startItem |> Seq.tryTake maxItems |> Seq.map ConvertToShared.ofDemo |> List.ofSeq
-                          Pages = demos.Count / maxItems + (if demos.Count % maxItems = 0 then 0 else 1) }
+                    let! demoData = cache.GetDemoPage(req)
                     return! json demoData next ctx
                 }
     ]
@@ -213,6 +249,8 @@ let configureApp (app : IApplicationBuilder) =
 let configureServices (services : IServiceCollection) =
 
     // Create run time view services and models
+    services.AddSingleton<Data.IMongoDataStore, Data.MongoDataStore>() |> ignore<IServiceCollection>
+    services.AddSingleton<Data.IMongoDbConnection, Data.MongoDbConnection>() |> ignore<IServiceCollection>
     services.AddSingleton<IDemosService, DemosService>() |> ignore<IServiceCollection>
     services.AddSingleton<ISteamService, SteamService>() |> ignore<IServiceCollection>
     services.AddSingleton<ICacheService, CacheService>() |> ignore<IServiceCollection>
@@ -235,28 +273,31 @@ let configureServices (services : IServiceCollection) =
     services.AddLogging(fun configure -> configure.AddConsole() |> ignore<ILoggingBuilder>) |> ignore<IServiceCollection>
     services.AddSingleton<Giraffe.Serialization.Json.IJsonSerializer>(Thoth.Json.Giraffe.ThothSerializer()) |> ignore<IServiceCollection>
 
-let host =
-    WebHost
-        .CreateDefaultBuilder()
-        .UseWebRoot(publicPath)
-        .UseContentRoot(publicPath)
-        .Configure(Action<IApplicationBuilder> configureApp)
-        .ConfigureServices(configureServices)
-        .UseUrls("http://0.0.0.0:" + port.ToString() + "/")
-        .Build()
+[<EntryPoint>]
+let main argv =
+    let host =
+        WebHost
+            .CreateDefaultBuilder()
+            .UseWebRoot(publicPath)
+            .UseContentRoot(publicPath)
+            .Configure(Action<IApplicationBuilder> configureApp)
+            .ConfigureServices(configureServices)
+            .UseUrls("http://0.0.0.0:" + port.ToString() + "/")
+            .Build()
 
-host.StartAsync().GetAwaiter().GetResult()
-// Start to build demo cache
-host.Services.GetService<IMyDemoService>() |> ignore<IMyDemoService>
+    host.StartAsync().GetAwaiter().GetResult()
+    // Start to build demo cache
+    host.Services.GetService<IMyDemoService>() |> ignore<IMyDemoService>
 
-printfn "Started server, write 'exit<Enter>' to stop the server"
-let mutable hasExited = false
-while not hasExited do
-    let currentCommand = System.Console.ReadLine()
-    if currentCommand = "exit" then
-        hasExited <- true
-    else    
-        printfn "Unknown command '%s'" currentCommand
+    printfn "Started server, write 'exit<Enter>' to stop the server"
+    let mutable hasExited = false
+    while not hasExited do
+        let currentCommand = System.Console.ReadLine()
+        if currentCommand = "exit" then
+            hasExited <- true
+        else    
+            printfn "Unknown command '%s'" currentCommand
 
-host.StopAsync().GetAwaiter().GetResult()
-printfn "Proper Backend Shutdown finished"
+    host.StopAsync().GetAwaiter().GetResult()
+    printfn "Proper Backend Shutdown finished"
+    0

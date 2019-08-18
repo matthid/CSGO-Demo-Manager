@@ -5,3 +5,4 @@ group Server
     Microsoft.AspNetCore.StaticFiles
     Microsoft.AspNetCore.SignalR
     Thoth.Json.Giraffe
+    MongoDB.Driver
