@@ -110,6 +110,9 @@ async function startServer () {
   proc.stderr.on('data', function(data) {
       console.log("STDERR: " + data.toString()); 
   });
+  proc.on("exit", (code, signal) => {
+    console.log(`CSGO_BACKEND_SERVER exited: ${code} ${signal}`); 
+  });
   //process.on("beforeExit", () => {
   //  proc.kill();
   //});

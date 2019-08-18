@@ -19,15 +19,16 @@ open Shared
 // we mark it as optional, because initially it will not be available from the client
 // the initial value will be requested from server
 type Model = {
-    DemoView : DemosView.Model;
-    LastNotification : Notification }
+    DemoView : DemosView.Model
+    NotificationsView : NotificationsView.Model }
 
 // The Msg type defines what events/actions can occur while the application is running
 // the state of the application changes *only* in reaction to these events
 type Msg =
 | DemoViewMsg of msg:DemosView.Msg
-| Notification of Notification
+| NotificationViewMsg of msg:NotificationsView.Msg
 | StartDownloadMM
+| UpdateState
 | StartDownloadMMStarted of res:StartMMDownloadResult
 
 let retryTimeout = 5000
@@ -64,10 +65,13 @@ let startSignalRConnection (connection:SignalR.HubConnection) (onConnected: bool
 // defines the initial state and initial command (= side-effect) of the application
 let init () : Model * Cmd<Msg> =
     let demoInit, demoCmd = DemosView.init()
-    let initialModel = { DemoView = demoInit; LastNotification = Notification.Hint "Initialize Application ... " }
+    let notificationInit, notificationCmd = NotificationsView.init()
+    let initialModel = { DemoView = demoInit; NotificationsView = notificationInit }
 
     let signalRSub = Cmd.ofSub(fun dispatch -> startSignalRConnection signalR (fun b -> 
         // dispatch Connected/Disconnected if needed
+        if b then
+            dispatch UpdateState
         ignore ()
     ))
 
@@ -75,14 +79,16 @@ let init () : Model * Cmd<Msg> =
         signalR.on("Notification", fun args ->
             let json = string args
             let notification = Thoth.Json.Decode.Auto.unsafeFromString json
-            dispatch(Notification notification))
+            dispatch(NotificationViewMsg <| NotificationsView.Notification notification))
     )
 
     initialModel, Cmd.batch [ demoCmd |> Cmd.map DemoViewMsg; signalRSub; signalREvents ]
 
 let startDownloadMM () =
     let url = sprintf "/api/downloadMM"
-    Fetch.fetchAs<StartMMDownloadResult> (Backend.getUrl url)
+    Fetch.fetchAs<StartMMDownloadResult> (
+        Backend.getUrl url, 
+        [ Method HttpMethod.POST; RequestProperties.Body (BodyInit.Case2 "test") ] )
 
 // The update function computes the next state of the application based on the current state and the incoming events/messages
 // It can also run side-effects (encoded as commands) like calling the server via Http.
@@ -92,10 +98,13 @@ let update (msg : Msg) (currentModel : Model) : Model * Cmd<Msg> =
     | DemoViewMsg msg ->
         let demoUpdate, demoCmd = DemosView.update msg currentModel.DemoView
         { currentModel with DemoView = demoUpdate }, demoCmd |> Cmd.map DemoViewMsg
+    | NotificationViewMsg msg ->
+        let notificationUpdate, notificationCmd = NotificationsView.update msg currentModel.NotificationsView
+        { currentModel with NotificationsView = notificationUpdate }, notificationCmd |> Cmd.map NotificationViewMsg
     | StartDownloadMM ->
         currentModel, Cmd.OfPromise.result (startDownloadMM () |> Promise.map StartDownloadMMStarted)
-    | Notification n ->
-        { currentModel with LastNotification = n }, Cmd.none
+    | UpdateState ->
+        currentModel, Cmd.ofMsg (NotificationViewMsg NotificationsView.UpdateTasks)
     | _ -> currentModel, Cmd.none
 
 
@@ -128,6 +137,7 @@ let button txt onClick =
           Button.Color IsPrimary
           Button.OnClick onClick ]
         [ str txt ]
+        
 
 let buttons model dispatch =
 
@@ -139,12 +149,6 @@ let buttons model dispatch =
         ]
     ]
 
-let showNotification (n:Notification) =
-    let str =
-        match n with
-        | Notification.Hint h -> str h
-        | Notification.DemosFound d -> str (System.String.Join(",", d))
-    div [  Style [ Color "gray" ] ] [ str ]
 let view (model : Model) (dispatch : Msg -> unit) =
     
     div []
@@ -153,7 +157,7 @@ let view (model : Model) (dispatch : Msg -> unit) =
                 [ Heading.h2 [ ]
                     [ str "CSGO Demo Manager" ] ] ]
           
-          showNotification model.LastNotification
+          NotificationsView.view model.NotificationsView (NotificationViewMsg >> dispatch)
           buttons model dispatch
           DemosView.view model.DemoView (DemoViewMsg >> dispatch)
 
