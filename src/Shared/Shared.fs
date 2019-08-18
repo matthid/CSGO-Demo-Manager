@@ -684,10 +684,26 @@ type DemoData =
     { Demos : Demo list
       Pages : int }
 
+type BackgroundTaskId = string
+
+type BackgroundTask =
+    { Id : BackgroundTaskId
+      Name : string 
+      Progress : double
+      Messages : string list }
+
 type StartMMDownloadResult =
-    { Status : string }
+    { Status : string; Task : BackgroundTaskId }
 
 type Notification =
     | DemosFound of string list
+    | TaskStarted of BackgroundTask
+    | TaskCompleted of BackgroundTaskId
+    | TaskProgressChanged of BackgroundTaskId * double
+    | TaskMessageChanged of BackgroundTaskId * string
     | Hint of string
     | Error of string
+
+
+type BackgroundTasks =
+    { Tasks : BackgroundTask list }

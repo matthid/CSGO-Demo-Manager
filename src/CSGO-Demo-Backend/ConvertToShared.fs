@@ -30,6 +30,11 @@ let ofDecimal (d:decimal) : Shared.DecimalNum =
 let ofSteamId (d:int64) : Shared.SteamId =
     d.ToString()
 
+let ofTaskId (d:System.Guid) = d.ToString()
+
+let ofTask (d:BackgroundTasks.IBackgroundTask) : Shared.BackgroundTask =
+    { Id = d.Id |> ofTaskId; Messages = d.Messages |> Seq.toList; Name = d.Name; Progress = d.Progress }
+
 let ofDict (d:System.Collections.Generic.IDictionary<_,_>) =
     d |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq
     

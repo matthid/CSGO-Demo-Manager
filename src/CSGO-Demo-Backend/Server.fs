@@ -13,6 +13,7 @@ open Giraffe
 open Shared
 open Services.Interfaces
 open Services.Concrete.Excel
+open BackgroundTasks
 open Services.Concrete
 open System.Collections.Generic
 open Microsoft.AspNetCore.SignalR
@@ -23,6 +24,7 @@ module LogEvents =
     let MissingReplayFolder = EventId 20001
     let BoilerExitCode = EventId 20002
     let ErrorMMDownload = EventId 20003
+    let ErrorSendingNotification = EventId 20004
 
 type INotificationService =
     abstract SendNotification : notification:Notification -> Task
@@ -44,7 +46,7 @@ type IMyDemoService =
     abstract member Cache : Async<IReadOnlyCollection<Core.Models.Demo>> with get
     abstract member GetDemoPage : req:DemoPageRequest -> Async<DemoData>
     abstract member GetDemoPageMongo : req:DemoPageRequest -> Async<DemoData>
-    abstract member StartMMDownload : CancellationToken -> unit
+    abstract member StartMMDownload : CancellationToken -> System.Guid
    
 module Seq =
     let tryTake (n : int) (s : _ seq) =
@@ -71,6 +73,7 @@ module Seq =
  
 type MyDemoService(logger:ILogger<MyDemoService>, cache : ICacheService, 
                    steam:ISteamService, notifications:INotificationService, demoService:IDemosService,
+                   backgroundTasks:BackgroundTasks.IBackgroundTaskManager,
                    data :Data.IMongoDataStore) =
     do Core.Logger.CoreInstance <- logger
     let demos = cache.GetDemoListAsync()
@@ -82,26 +85,74 @@ type MyDemoService(logger:ILogger<MyDemoService>, cache : ICacheService,
         else
             logger.LogWarning(LogEvents.MissingReplayFolder, "Replays folder '{folderName}' doesn't exit", demoFolder)
             demoService.DownloadFolderPath
-    let sendErr msg = 
+    let sendErr msg =
         notifications.SendNotification(Notification.Error msg)
     let send msg = 
         notifications.SendNotification(Notification.Hint msg)
-    member x.ProcessDemosDownloaded (ct:CancellationToken) =
+    let sendAndIgnore msg = 
+        async {
+            try
+                do! notifications.SendNotification(msg) |> Async.AwaitTask
+            with e ->
+                logger.LogError(LogEvents.ErrorSendingNotification, e, "Error while trying to send notification")
+        }
+        |> Async.Start
+    let sub1 =
+        backgroundTasks.TaskMessageChanged.Subscribe(Action<_>(fun ((taskId, message): struct (Guid * string)) -> 
+            sendAndIgnore(Notification.TaskMessageChanged(taskId |> ConvertToShared.ofTaskId, message))))
+    let sub2 =
+        backgroundTasks.TaskProgressChanged.Subscribe(Action<_>(fun ((taskId, progress): struct (Guid * double)) -> 
+            sendAndIgnore(Notification.TaskProgressChanged(taskId |> ConvertToShared.ofTaskId, progress))))
+    let sub3 =
+        backgroundTasks.TaskStarted.Subscribe(Action<_>(fun (task: IBackgroundTask) -> 
+            sendAndIgnore(Notification.TaskStarted(task |> ConvertToShared.ofTask))))
+    let sub4 =
+        backgroundTasks.TaskCompleted.Subscribe(Action<_>(fun (taskId : Guid) -> 
+            sendAndIgnore(Notification.TaskCompleted(taskId |> ConvertToShared.ofTaskId))))
+
+    let processDemosDownloaded (reporter:BackgroundTasks.IProgressReporter) (ct:CancellationToken) =
         task {
             let! demos = demoService.GetDemoListUrl()
             if demos.Count > 0 then
                 for kv, i in demos |> Seq.mapi (fun i kv -> kv, i) do
                     let demoName, demoUrl = kv.Key, kv.Value
-                    do! send (sprintf "Downloading '%s' (%d/%d)" demoName (i+1) demos.Count)
+                    reporter.AddMessage (sprintf "Downloading '%s' (%d/%d)" demoName (i+1) demos.Count)
                     let! ok = demoService.DownloadDemo(demoUrl, demoName)
-                    do! send (sprintf "Extracting '%s' (%d/%d)" demoName (i+1) demos.Count)
+                    reporter.AddMessage (sprintf "Extracting '%s' (%d/%d)" demoName (i+1) demos.Count)
                     let! ok = demoService.DecompressDemoArchive(demoName)
                     ()
-                do! send "All done."                
+                reporter.AddMessage "All done"
             else 
-                do! send "No newer demos found"
+                reporter.AddMessage "No newer demos found"
 
         }
+
+    let startMMDownloadTask = System.Func<BackgroundTasks.IProgressReporter, CancellationToken, Task>(fun reporter ct ->
+        task {
+            if not (Directory.Exists demoService.DownloadFolderPath) then
+                reporter.AddMessage (sprintf "Download folder '%s' not found" demoService.DownloadFolderPath)
+            else
+            try
+                let! result = steam.GenerateMatchListFile(ct)
+                logger.LogInformation(LogEvents.BoilerExitCode, "Boiler.exe result {exitCode}", result)
+                // See DemoListViewModel.HandleBoilerResult
+                match result with
+                | 1 -> reporter.AddError "BoilerNotFound"
+                | 2 ->reporter.AddError "DialogBoilerIncorrect"
+                | -1 ->reporter.AddError "Invalid arguments"
+                | -2 -> reporter.AddError "DialogRestartSteam"
+                | -3 | -4 -> reporter.AddError "DialogSteamNotRunningOrNotLoggedIn"
+                | -5 | -6 | -7 -> reporter.AddError "DialogErrorWhileRetrievingMatchesData"
+                | -8 -> reporter.AddError "DialogNoNewerDemo"
+                | 0 -> do! processDemosDownloaded reporter ct
+                | _ -> reporter.AddError (sprintf "Unknown boiler exit code '%d'" result)
+            with e ->
+                logger.LogError(LogEvents.ErrorMMDownload, e, "Error in StartMMDownload")
+                reporter.AddError <| e.ToString()
+        }
+        :> _)
+
+    
     interface IMyDemoService with
         member x.Cache
             with get () =
@@ -132,30 +183,8 @@ type MyDemoService(logger:ILogger<MyDemoService>, cache : ICacheService,
                 // data.FindDemoPage()
                 return failwithf "test"
             }
-        member x.StartMMDownload (ct:CancellationToken) =
-            task {
-                if not (Directory.Exists demoService.DownloadFolderPath) then
-                    do! sendErr (sprintf "Download folder '%s' not found" demoService.DownloadFolderPath)
-                else
-                try
-                    let! result = steam.GenerateMatchListFile(ct)
-                    logger.LogInformation(LogEvents.BoilerExitCode, "Boiler.exe result {exitCode}", result)
-                    // See DemoListViewModel.HandleBoilerResult
-                    match result with
-                    | 1 -> do! sendErr "BoilerNotFound"
-                    | 2 -> do! sendErr "DialogBoilerIncorrect"
-                    | -1 -> do! sendErr "Invalid arguments"
-                    | -2 -> do! sendErr "DialogRestartSteam"
-                    | -3 | -4 -> do! sendErr "DialogSteamNotRunningOrNotLoggedIn"
-                    | -5 | -6 | -7 -> do! sendErr "DialogErrorWhileRetrievingMatchesData"
-                    | -8 -> do! sendErr "DialogNoNewerDemo"
-                    | 0 -> do! x.ProcessDemosDownloaded ct
-                    | _ -> do! sendErr (sprintf "Unknown boiler exit code '%d'" result)
-                with e ->
-                    logger.LogError(LogEvents.ErrorMMDownload, e, "Error in StartMMDownload")
-                    do! sendErr <| e.ToString()
-            }
-            |> ignore        
+        member x.StartMMDownload (ct:CancellationToken) : System.Guid =
+            backgroundTasks.StartTask(startMMDownloadTask, "Downloading Matchmaking data", true)
 
 let tryGetEnv = System.Environment.GetEnvironmentVariable >> function null | "" -> None | x -> Some x
 
@@ -186,18 +215,18 @@ let port =
 
 let webApp =
     choose [
-        route "/api/downloadMM" >=>
+        POST >=> route "/api/downloadMM" >=>
             fun next ctx ->
                 task {
-                    let r = { Status = "Ok" }
                     //let notification = ctx.GetService<INotificationService>()
                     //let demoService = ctx.GetService<IDemosService>()
                     //do! notification.SendNotification (Notification.Hint (sprintf "downloadPath: %s" demoService.DownloadFolderPath))
                     let demoService = ctx.GetService<IMyDemoService>()
-                    demoService.StartMMDownload CancellationToken.None
+                    let t = demoService.StartMMDownload CancellationToken.None
+                    let r = { Status = "Ok"; Task = t |> ConvertToShared.ofTaskId }
                     return! json r next ctx
                 }
-        route "/api/demos" >=>
+        GET >=> route "/api/demos" >=>
             fun next ctx ->
                 task {
                     let startItem =
@@ -225,6 +254,33 @@ let webApp =
                     let! demoData = cache.GetDemoPage(req)
                     return! json demoData next ctx
                 }
+        GET >=> route "/api/tasks" >=>
+            fun next ctx ->
+                task {
+                    let mgr = ctx.GetService<BackgroundTasks.IBackgroundTaskManager>()
+                    let tasks = mgr.CurrentTasks |> Seq.map (ConvertToShared.ofTask) |> Seq.toList
+                    let taskList = { Tasks = tasks }
+                    return! json taskList next ctx
+                }
+        GET >=> routef "/api/tasks/%s" (fun taskId ->
+            fun next ctx ->
+                task {
+                    let mgr = ctx.GetService<BackgroundTasks.IBackgroundTaskManager>()
+                    match mgr.TryGetTask(taskId |> Guid.Parse) with
+                    | true, task ->
+                        return! json task next ctx
+                    | _ -> 
+                        return! RequestErrors.NOT_FOUND "task not found" next ctx
+                })
+        DELETE >=> routef "/api/tasks/%s" (fun taskId ->
+            fun next ctx ->
+                task {
+                    let mgr = ctx.GetService<BackgroundTasks.IBackgroundTaskManager>()
+                    if mgr.CancelTask(Guid.Parse taskId) then
+                        return! Successful.OK "task cancelled" next ctx
+                    else
+                        return! RequestErrors.NOT_FOUND "task not found" next ctx
+                })
     ]
 
 type NotificationHub () =
@@ -249,6 +305,7 @@ let configureApp (app : IApplicationBuilder) =
 let configureServices (services : IServiceCollection) =
 
     // Create run time view services and models
+    services.AddSingleton<BackgroundTasks.IBackgroundTaskManager, BackgroundTasks.BackgroundTaskManager>() |> ignore<IServiceCollection>
     services.AddSingleton<Data.IMongoDataStore, Data.MongoDataStore>() |> ignore<IServiceCollection>
     services.AddSingleton<Data.IMongoDbConnection, Data.MongoDbConnection>() |> ignore<IServiceCollection>
     services.AddSingleton<IDemosService, DemosService>() |> ignore<IServiceCollection>
