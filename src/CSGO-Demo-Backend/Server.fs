@@ -332,29 +332,30 @@ let configureServices (services : IServiceCollection) =
 
 [<EntryPoint>]
 let main argv =
-    let host =
-        WebHost
-            .CreateDefaultBuilder()
-            .UseWebRoot(publicPath)
-            .UseContentRoot(publicPath)
-            .Configure(Action<IApplicationBuilder> configureApp)
-            .ConfigureServices(configureServices)
-            .UseUrls("http://0.0.0.0:" + port.ToString() + "/")
-            .Build()
+    (   use host =
+            WebHost
+                .CreateDefaultBuilder()
+                .UseWebRoot(publicPath)
+                .UseContentRoot(publicPath)
+                .Configure(Action<IApplicationBuilder> configureApp)
+                .ConfigureServices(configureServices)
+                .UseUrls("http://0.0.0.0:" + port.ToString() + "/")
+                .Build()
 
-    host.StartAsync().GetAwaiter().GetResult()
-    // Start to build demo cache
-    host.Services.GetService<IMyDemoService>() |> ignore<IMyDemoService>
+        host.StartAsync().GetAwaiter().GetResult()
+        // Start to build demo cache
+        host.Services.GetService<IMyDemoService>() |> ignore<IMyDemoService>
 
-    printfn "Started server, write 'exit<Enter>' to stop the server"
-    let mutable hasExited = false
-    while not hasExited do
-        let currentCommand = System.Console.ReadLine()
-        if currentCommand = "exit" then
-            hasExited <- true
-        else    
-            printfn "Unknown command '%s'" currentCommand
+        printfn "Started server, write 'exit<Enter>' to stop the server"
+        let mutable hasExited = false
+        while not hasExited do
+            let currentCommand = System.Console.ReadLine()
+            if currentCommand = "exit" then
+                hasExited <- true
+            else    
+                printfn "Unknown command '%s'" currentCommand
 
-    host.StopAsync().GetAwaiter().GetResult()
-    printfn "Proper Backend Shutdown finished"
+        host.StopAsync().GetAwaiter().GetResult()
+        printfn "Backend server closed")
+    printfn "Proper Backend Shutdown finished" 
     0
