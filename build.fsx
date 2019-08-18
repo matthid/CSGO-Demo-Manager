@@ -444,6 +444,7 @@ let mongoDbWork =
     [ "https://fastdl.mongodb.org/win32/mongodb-win32-x86_64-2012plus-4.2.0.zip", "mongodb-win32-x86_64-2012plus-4.2.0", "mongodb-win32-x86_64", "mongod.exe" ]
     
 Target.create "DownloadMongoDb" (fun _ ->
+    Directory.ensure "./external/mongodb"
     for dl, longName, name, exe in mongoDbWork do
         let zipFile = sprintf "./external/mongodb/%s.zip" name
         if not (File.Exists zipFile) then
