@@ -98,10 +98,10 @@ type MyDemoService(logger:ILogger<MyDemoService>, cache : ICacheService,
         }
         |> Async.Start
     let sub1 =
-        backgroundTasks.TaskMessageChanged.Subscribe(Action<_>(fun ((taskId, message): struct (Guid * string)) -> 
+        backgroundTasks.TaskMessageChanged.Subscribe(Action<_>(fun (struct (taskId, message): struct (Guid * string)) -> 
             sendAndIgnore(Notification.TaskMessageChanged(taskId |> ConvertToShared.ofTaskId, message))))
     let sub2 =
-        backgroundTasks.TaskProgressChanged.Subscribe(Action<_>(fun ((taskId, progress): struct (Guid * double)) -> 
+        backgroundTasks.TaskProgressChanged.Subscribe(Action<_>(fun (struct (taskId, progress): struct (Guid * double)) -> 
             sendAndIgnore(Notification.TaskProgressChanged(taskId |> ConvertToShared.ofTaskId, progress))))
     let sub3 =
         backgroundTasks.TaskStarted.Subscribe(Action<_>(fun (task: IBackgroundTask) -> 
