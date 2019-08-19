@@ -37,8 +37,10 @@ namespace Data
         Duration
     }
 
-    public interface IMongoDataStore {
-        Task AddDemo (Data.Demo demo, CancellationToken token);
+    public interface IMongoDataStore
+    {
+        Task AddOrUpdateDemo(Data.Demo demo, CancellationToken token);
+        Task<Data.Demo> FindDemoByFile(string filePath, CancellationToken token);
         Task<List<Data.Demo>> FindDemoPage(string steamId, int startItem, int maxItems, DemoSortingField sortBy, bool sortDescending, CancellationToken token);
     
         Task<string> AddOrUpdateAccount(Data.Account account);
@@ -51,8 +53,9 @@ namespace Data
     public static class DemoStoreExtensions
     {
             
-        public static Data.Source ToData(this Core.Models.Source.Source source) {
-            switch (source.Name)
+        public static Data.Source GetSourceData(this Core.Models.Demo demo) {
+            
+            switch (demo.SourceName ?? demo.Source?.Name ?? "unknown")
 			{
 				case Core.Models.Source.Valve.NAME:
 					return Data.Source.MatchMaking;
@@ -96,9 +99,10 @@ namespace Data
         public static Data.Demo ToData(this Core.Models.Demo demo, ObjectId comment_account){
             return new Data.Demo() {
                 DataVersion = 1,
+                LocalFilePath = Path.GetFullPath(demo.Path),
                 Name = demo.Name,
                 Date = demo.Date,
-                Source = demo.Source.ToData(),
+                Source = demo.GetSourceData(),
                 Hostname = demo.Hostname,
                 DemoTickRate = demo.Tickrate,
                 ServerTickRate = demo.ServerTickrate,
@@ -114,10 +118,10 @@ namespace Data
             };
         }
 
-        public static Task AddDemo(this IMongoDataStore store, Core.Models.Demo demo, ObjectId comment_account, CancellationToken token)
+        public static Task AddOrUpdateDemo(this IMongoDataStore store, Core.Models.Demo demo, ObjectId comment_account, CancellationToken token)
         {
             var dataDemo = demo.ToData(comment_account);
-            return store.AddDemo(dataDemo, token);
+            return store.AddOrUpdateDemo(dataDemo, token);
         }
     }
 
@@ -144,27 +148,88 @@ namespace Data
             }
 
             var db = _con.GetDemoDatabase();
-            var col = db.GetCollection<Data.Account>("accounts");
+            var col = db.GetCollection<Data.Demo>("demos");
             var indices = await col.Indexes.ListAsync();
             var indicesList = await indices.ToListAsync();
-            //if (indicesList.Count == 0)
-            //{
-            //    await col.Indexes.CreateOneAsync(
-            //        new CreateIndexModel<Account>(
-            //            Builders<Account>.IndexKeys.Ascending(x => x.SteamId),
-            //            new CreateIndexOptions { Unique = true }),
-            //        new CreateOneIndexOptions() { });
-            //}
+            if (indicesList.Count == 0)
+            {
+                // Already ok as it is the _id field now
+                //await col.Indexes.CreateOneAsync(
+                //    new CreateIndexModel<Account>(
+                //        Builders<Account>.IndexKeys.Ascending(x => x.SteamId),
+                //        new CreateIndexOptions { Unique = true }),
+                //    new CreateOneIndexOptions() { });
+                var options = new CreateIndexOptions() { Unique = true };
+                var indexDefinition = new IndexKeysDefinitionBuilder<Demo>().Ascending(d => d.LocalFilePath);
+                var indexModel = new CreateIndexModel<Demo>(indexDefinition, options);
+                await col.Indexes.CreateOneAsync(indexModel);
+            }
 
             _indicesOk = true;
         }
 
-        public async Task AddDemo(Data.Demo demo, CancellationToken token)
+        private static UpdateDefinition<T> UpdateIfAny<T, TItem>(UpdateDefinition<T> upds, T obj, System.Linq.Expressions.Expression<Func<T, TItem>> expr)
+        {
+            var val = expr.Compile().Invoke(obj);
+            if (EqualityComparer<TItem>.Default.Equals(val, default(TItem))) upds = upds.Set(expr, val);
+            return upds;
+        }
+
+
+        public async Task AddOrUpdateDemo(Data.Demo demo, CancellationToken token)
         {
             await InitIndices();
             var db = _con.GetDemoDatabase();
             var col = db.GetCollection<Data.Demo>("demos");
-            await col.InsertOneAsync(demo, new InsertOneOptions() { }, token);
+            //await col.InsertOneAsync(demo, new InsertOneOptions() { }, token);
+            //var up = new ObjectUpdateDefinition<Data.Demo>(demo);
+            var builder = Builders<Demo>.Update;
+            var update = builder.SetOnInsert(d => d.LocalFilePath, demo.LocalFilePath);
+            if (demo.Id == ObjectId.Empty) {
+                demo.Id = ObjectId.GenerateNewId();
+                update = update.SetOnInsert(d => d.Id, demo.Id);
+            };
+
+            update = UpdateIfAny(update, demo, d => d.Comments);
+            update = UpdateIfAny(update, demo, d => d.CTStartTeam);
+            update = UpdateIfAny(update, demo, d => d.DataVersion);
+            update = UpdateIfAny(update, demo, d => d.Date);
+            update = UpdateIfAny(update, demo, d => d.DemoTickRate);
+            update = UpdateIfAny(update, demo, d => d.Duration);
+            update = UpdateIfAny(update, demo, d => d.Hostname);
+            update = UpdateIfAny(update, demo, d => d.LocalFilePath);
+            update = UpdateIfAny(update, demo, d => d.Map);
+            update = UpdateIfAny(update, demo, d => d.Name);
+            update = UpdateIfAny(update, demo, d => d.Rounds);
+            update = UpdateIfAny(update, demo, d => d.ServerTickRate);
+            update = UpdateIfAny(update, demo, d => d.Source);
+            update = UpdateIfAny(update, demo, d => d.Surrendered);
+            update = UpdateIfAny(update, demo, d => d.Ticks);
+            update = UpdateIfAny(update, demo, d => d.TStartTeam);
+            update = UpdateIfAny(update, demo, d => d.WinningTeam);
+            var res = await col.UpdateOneAsync(dem => dem.LocalFilePath == demo.LocalFilePath, update, new UpdateOptions() { IsUpsert = true });
+
+        }
+
+        public async Task<Data.Demo> FindDemoByFile(string filePath, CancellationToken token)
+        {
+            await InitIndices();
+            var db = _con.GetDemoDatabase();
+            var col = db.GetCollection<Data.Demo>("demos");
+            var findCursor = await col.FindAsync(demo => demo.LocalFilePath == filePath);
+            var res = await findCursor.ToListAsync();
+
+            if (res.Count < 1)
+            {
+                return null;
+            }
+
+            if (res.Count > 1)
+            {
+                _logger.LogWarning(LogEvents.MultipleSettingsDocuments, "Multiple ({count}) demo documents with given path, using the first.", res.Count);
+            }
+
+            return res.First();
         }
 
         public async Task<List<Data.Demo>> FindDemoPage(string steamId, int startItem, int maxItems, DemoSortingField sortBy, bool sortDescending, CancellationToken token)

@@ -178,15 +178,62 @@ type MyDemoService(logger:ILogger<MyDemoService>, cache : ICacheService,
                 else
                     return settings.SelectedAccount }
                 
-            reporter.AddMessage ("Waiting for cache to load")
+            reporter.AddMessage ("Waiting for (csgo-demo-manager) cache to load")
             let! demos = demos
-            for demo in demos do
+            for i, demo in demos |> Seq.mapi (fun i d -> i, d) do
                 reporter.AddMessage (sprintf "Importing %s" demo.Name)
-                do! data.AddDemo(demo, account, ct)
+                reporter.SetProgress(100.0 * float i / float demos.Count)
+                do! data.AddOrUpdateDemo(demo, account, ct)
+                
+            if isNull settings.ReplayFolders then
+                reporter.AddMessage ("Importing folders from old demo manager")
+                let! folders = cache.GetFoldersAsync()
+                settings.ReplayFolders <- folders
+                do! data.UpdateSettings(settings)
+                
+            reporter.SetProgress(0.)
+            let filesToAnalyse =
+                settings.ReplayFolders
+                    |> Seq.filter Directory.Exists
+                    |> Seq.collect (fun d -> Directory.GetFiles(d, "*.dem"))
+                    |> Seq.filter (fun f -> not <| f.Contains("myassignedcase"))
+                    |> Seq.map (fun f -> Path.GetFullPath f)
+                    |> Seq.toList
+            reporter.AddMessage (sprintf "%d demo files found, checking cache..." filesToAnalyse.Length)
+            // Check if we need to re-analyse anything.
+            let toAnalyse = new List<_>()
+            for i, file in filesToAnalyse |> Seq.mapi (fun i d -> i,d) do
+                reporter.SetProgress(100.0 * float i / float filesToAnalyse.Length)
+                let! demo = data.FindDemoByFile(file, ct)
+                if isNull demo then toAnalyse.Add file
+              
+              
+            reporter.AddMessage (sprintf "Import finished, starting %d new tasks for demo analysis" toAnalyse.Count)
 
-            
-
-            reporter.AddMessage ("Import finished")
+            for file in toAnalyse do
+                System.Func<BackgroundTasks.IProgressReporter, CancellationToken, Task>(fun reporter ct ->
+                    task {
+                        let! dem = demoService.GetDemoHeaderAsync(file)
+                        if not (isNull dem) then
+                            let! dem =
+                                if cache.HasDemoInCache(dem.Id) then
+                                    cache.GetDemoDataFromCache(dem.Id)
+                                else
+                                    task {
+                                        let! dem = demoService.AnalyzeDemo(dem, ct, fun msg progress ->
+                                            reporter.SetProgress(100. * float progress))
+                                        // needs steam api key
+                                        //let! dem = demoService.AnalyzeBannedPlayersAsync(dem)
+                                        do! cache.WriteDemoDataCache(dem)
+                                        return dem
+                                    }
+                
+                            do! data.AddOrUpdateDemo(dem, account, ct)
+                    }
+                    :> _
+                )
+                |> fun f -> backgroundTasks.StartTask(f, sprintf "Analyse demo %s" file, true)
+                |> ignore<Guid>
         }
         :> _)
 

@@ -14,6 +14,9 @@ namespace Data
 
         [BsonElement("selected_account")]
         public ObjectId SelectedAccount { get; set; }
+
+        [BsonElement("replay_folders")]
+        public List<string> ReplayFolders { get; set; }
     }
 
     public class AccountRef {
@@ -92,11 +95,17 @@ namespace Data
 
     public class Demo
     {
+        [BsonId]
+        public ObjectId Id { get; set; }
+
         [BsonElement("data_version")]
         public int DataVersion { get; set; }
 
         [BsonElement("name")]
         public string Name { get; set; }
+
+        [BsonElement("local_file_path")]
+        public string LocalFilePath { get; set; }
 
         [BsonElement("date")]
         public Date Date { get; set; }
