@@ -7,6 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Logging;
+
 namespace BackgroundTasks {
     using TaskId = System.Guid;
     public interface IProgressReporter
@@ -61,14 +63,16 @@ namespace BackgroundTasks {
     public class BackgroundTask : IBackgroundTask, IProgressReporter
     {
         CancellationTokenSource tokSource = new CancellationTokenSource();
+        private readonly ILogger<BackgroundTaskManager> _logger;
         BackgroundTaskManager manager;
         Task _task = null;
         private ConcurrentQueue<string> _messages = new ConcurrentQueue<string>();
         
-        public BackgroundTask(BackgroundTaskManager mgr, string name, bool canCancel)
+        public BackgroundTask(ILogger<BackgroundTaskManager> logger, BackgroundTaskManager mgr, string name, bool canCancel)
         {
             Name = name;
             Id = System.Guid.NewGuid();
+            _logger = logger;
             manager = mgr;
             StartTime = DateTime.Now;
             CanCancel = canCancel;
@@ -98,7 +102,9 @@ namespace BackgroundTasks {
                     SetProgress(100);
                 }
 
-                if (t.IsFaulted && t.Exception != null) {
+                if (t.IsFaulted && t.Exception != null)
+                {
+                    _logger.LogError(t.Exception, "Error in background task");
                     AddMessage($"Faulted: {t.Exception}");
                 }
 
@@ -128,9 +134,11 @@ namespace BackgroundTasks {
         private readonly Subject<(TaskId id, string message)> _taskMessageChanged = new Subject<(TaskId id, string message)>();
         private readonly Subject<TaskId> _taskCompleted = new Subject<TaskId>();
         private readonly Subject<IBackgroundTask> _taskStarted = new Subject<IBackgroundTask>();
+        private readonly ILogger<BackgroundTaskManager> _logger;
 
-        public BackgroundTaskManager()
+        public BackgroundTaskManager(ILogger<BackgroundTaskManager> logger)
         {
+            _logger = logger;
         }
 
         public IEnumerable<IBackgroundTask> CurrentTasks => _tasks.Values;
@@ -149,7 +157,7 @@ namespace BackgroundTasks {
         public IObservable<IBackgroundTask> TaskStarted => _taskStarted;
         public TaskId StartTask(Func<IProgressReporter, CancellationToken, Task> createTask, string name, bool canCancel = false)
         {
-            var wrappedTask = new BackgroundTask(this, name, canCancel);
+            var wrappedTask = new BackgroundTask(_logger, this, name, canCancel);
             //_tasks.AddOrUpdate(wrappedTask.Id, ((k, res) => res), (k, t, res) => res, wrappedTask);
             _tasks.AddOrUpdate(wrappedTask.Id, ((k) => wrappedTask), (k, t) => wrappedTask);
             wrappedTask.StartTask(createTask);
@@ -168,7 +176,7 @@ namespace BackgroundTasks {
             } 
             else
             {
-                Console.Error.WriteLine($"Task {id} unknown! {Environment.StackTrace}");
+                _logger.LogWarning("Task {id} unknown", id);
                 return false;
             }
         }

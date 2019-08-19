@@ -11,6 +11,7 @@ open Microsoft.Extensions.Logging
 open FSharp.Control.Tasks.V2
 open Giraffe
 open Shared
+open global.Data
 open Services.Interfaces
 open Services.Concrete.Excel
 open BackgroundTasks
@@ -152,6 +153,44 @@ type MyDemoService(logger:ILogger<MyDemoService>, cache : ICacheService,
         }
         :> _)
 
+    let startCacheImport = System.Func<BackgroundTasks.IProgressReporter, CancellationToken, Task>(fun reporter ct ->
+        task {
+        
+            reporter.AddMessage ("Importing accounts")
+            let! settings = data.GetSettings()
+            let! account = task {
+                if (settings.SelectedAccount = MongoDB.Bson.ObjectId.Empty) then
+                    let multi_account = new MultiAccount()
+                    let! multi_account_id = data.AddOrUpdateMultiAccount(multi_account)
+                    let! accs = cache.GetAccountListAsync()
+                    let ids = new List<_>()
+                    for acc in accs do
+                        let account = new Account()
+                        account.Name <- acc.Name
+                        account.SteamId <- acc.SteamId
+                        let! id = data.AddOrUpdateAccount(account)
+                        ids.Add(new AccountRef(AccountId = id))
+                    multi_account.LinkedAccounts <- ids
+                    let! multi_account_id = data.AddOrUpdateMultiAccount(multi_account)
+                    settings.SelectedAccount <- multi_account_id
+                    do! data.UpdateSettings(settings)
+                    return settings.SelectedAccount
+                else
+                    return settings.SelectedAccount }
+                
+            reporter.AddMessage ("Waiting for cache to load")
+            let! demos = demos
+            for demo in demos do
+                reporter.AddMessage (sprintf "Importing %s" demo.Name)
+                do! data.AddDemo(demo, account, ct)
+
+            
+
+            reporter.AddMessage ("Import finished")
+        }
+        :> _)
+
+    do backgroundTasks.StartTask(startCacheImport, "Demos Manager Import", true) |> ignore<Guid>
     
     interface IMyDemoService with
         member x.Cache
