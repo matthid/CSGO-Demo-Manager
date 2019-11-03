@@ -12,6 +12,7 @@
         <Compile Include="..\Shared\Shared.fs" />
         <Compile Include="Version.fs" />
         <Compile Include="Backend.fs" />
+        <Compile Include="NotificationsView.fs" />
         <Compile Include="DemosView.fs" />
         <Compile Include="Client.fs" />
     </ItemGroup>

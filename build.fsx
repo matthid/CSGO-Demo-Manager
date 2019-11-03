@@ -14,6 +14,7 @@ open Fake.BuildServer
 open Fake.Core
 open Fake.DotNet
 open Fake.IO
+open Fake.Net
 open Fake.IO.Globbing.Operators
 open Fake.Tools
 
@@ -218,24 +219,27 @@ Target.create "Run" (fun _ ->
 )
 
 Target.create "PublishServer" (fun _ ->
-    let rids = [ "win-x64"; "osx-x64"; "linux-x64" ]
-    for r in rids do
+    let ridsAndMongo = [ ("win-x64", "mongodb-win32-x86_64") (*; "osx-x64"; "linux-x64"*) ]
+    for r, mongoDirName in ridsAndMongo do
         let outDir = Path.getFullName (sprintf "./publish/Server/%s" r)
         let args = sprintf "publish -r %s -o \"%s\"" r outDir
         runDotNet args serverPath
+        let mongoDir = sprintf "./external/mongodb/%s.light" mongoDirName
+        Shell.cp_r mongoDir (outDir + "/mongodb")
+
 )
 
 Target.create "ElectronPackages" (fun _ ->
     Environment.setEnvironVar "DEBUG" "*"
-    [ "run"; "electron-packager"; "./publish"; appName; "--platform"; "win32,linux,darwin"; "--arch"; "x64"; "--out"; "./deploy/package"]    
+    [ "run"; "electron-packager"; "./publish"; appName; "--platform"; "win32"(*"win32,linux,darwin"*); "--arch"; "x64"; "--out"; "./deploy/package"]    
     |> runToolWithArgs yarnTool __SOURCE_DIRECTORY__
     Environment.setEnvironVar "DEBUG" null
 
     // Cleanup & zip packages (as we don't need to bundle all binaries)
     let toCleanup =
           // electron folder -> rid to keep -> dir
-        [ "darwin-x64", "osx-x64", sprintf "%s.app/Contents/Resources" appName
-          "linux-x64", "linux-x64", "resources"
+        [ //"darwin-x64", "osx-x64", sprintf "%s.app/Contents/Resources" appName
+          //"linux-x64", "linux-x64", "resources"
           "win32-x64", "win-x64", "resources" ]
     for electron, toKeep, subDir in toCleanup do
         let dirs = System.IO.Directory.EnumerateDirectories(sprintf "./deploy/package/%s-%s/%s/app/Server" appName electron subDir) |> Seq.toList
@@ -436,6 +440,36 @@ Target.create "Release_Github" (fun _ ->
     |> GitHub.publishDraft
     |> Async.RunSynchronously
 )
+let mongoDbWork =
+    [ "https://fastdl.mongodb.org/win32/mongodb-win32-x86_64-2012plus-4.2.0.zip", "mongodb-win32-x86_64-2012plus-4.2.0", "mongodb-win32-x86_64", "mongod.exe" ]
+    
+Target.create "DownloadMongoDb" (fun _ ->
+    Directory.ensure "./external/mongodb"
+    for dl, longName, name, exe in mongoDbWork do
+        let zipFile = sprintf "./external/mongodb/%s.zip" name
+        if not (File.Exists zipFile) then
+            Http.downloadFile zipFile dl
+                |> ignore<string>
+)
+
+Target.create "PrepareMongoDbFiles" (fun _ ->
+    for dl, longName, name, exe in mongoDbWork do
+        let zipFile = sprintf "./external/mongodb/%s.zip" name
+        let extractedDir = sprintf "./external/mongodb/%s" name
+        if not (Directory.Exists extractedDir) then
+            Zip.unzip extractedDir zipFile
+            let tmpDir = extractedDir+".tmp"
+            Directory.Move(extractedDir, tmpDir)
+            Directory.Move(sprintf "%s/%s" tmpDir longName, extractedDir)
+            Directory.Delete(tmpDir)
+        let extractedDirLight = sprintf "./external/mongodb/%s.light" name
+        if not (Directory.Exists extractedDirLight) then
+            Shell.cp_r extractedDir extractedDirLight
+            for f in Directory.EnumerateFiles (sprintf "%s/bin" extractedDirLight) |> Seq.toList do
+                if (Path.GetFileName f <> exe) then
+                    File.Delete f
+
+)
 
 open Fake.Core.TargetOperators
 
@@ -444,6 +478,10 @@ open Fake.Core.TargetOperators
     ==> "InstallClient"
     ==> "BuildClient"
     ==> "ElectronPackages"
+
+"DownloadMongoDb"
+    ==> "PrepareMongoDbFiles"
+    ==> "PublishServer" // copies monodb files
 
 "Clean"
     ==> "BuildServer"
