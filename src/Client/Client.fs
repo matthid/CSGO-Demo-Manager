@@ -172,7 +172,7 @@ open Elmish.HMR
 
 Program.mkProgram init update view
 #if DEBUG
-|> Program.withConsoleTrace
+//|> Program.withConsoleTrace
 #endif
 |> Program.withReactBatched "elmish-app"
 #if DEBUG

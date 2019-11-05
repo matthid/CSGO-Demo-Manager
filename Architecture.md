@@ -16,14 +16,23 @@
 
 Defined in `Data` project
 
-`multi_account:`
+`settings:`
 ```json
 {
+  "selected_account": multi_account._id,
+  
+}
+```
+
+`multi_accounts:`
+```json
+{
+  "name": "default",
   "linked_accounts": [ { "account_id": "<steamId>" } ]
 }
 ```
 
-accounts:
+`accounts:`
 ```json
   {
      steam_id: <steamId>

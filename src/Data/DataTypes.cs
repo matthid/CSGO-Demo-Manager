@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
@@ -7,6 +7,17 @@ using Duration = System.Single;
 
 namespace Data
 {
+    public class Settings
+    {
+        [BsonId]
+        public ObjectId Id { get; set; }
+
+        [BsonElement("selected_account")]
+        public ObjectId SelectedAccount { get; set; }
+
+        [BsonElement("replay_folders")]
+        public List<string> ReplayFolders { get; set; }
+    }
 
     public class AccountRef {
         [BsonElement("account_id")]
@@ -14,12 +25,16 @@ namespace Data
     }
     public class MultiAccount
     {
+        [BsonId]
+        public ObjectId Id { get; set; }
+
         [BsonElement("linked_accounts")]
         public List<AccountRef> LinkedAccounts { get; set; }
     }
 
     public class Account
     {
+        [BsonId]
         [BsonElement("steam_id")]
         public string SteamId { get; set; }
 
@@ -33,7 +48,8 @@ namespace Data
     }
 
     public enum Source {
-        MatchMaking
+        MatchMaking,
+        Other
     }
 
     public enum Team {
@@ -57,6 +73,8 @@ namespace Data
 
     public class DemoTeam 
     {
+        [BsonElement("name")]
+        public string Name { get; set; }
         [BsonElement("score")]
         public int Score { get; set; }
         [BsonElement("score_first_half")]
@@ -77,11 +95,17 @@ namespace Data
 
     public class Demo
     {
+        [BsonId]
+        public ObjectId Id { get; set; }
+
         [BsonElement("data_version")]
         public int DataVersion { get; set; }
 
         [BsonElement("name")]
         public string Name { get; set; }
+
+        [BsonElement("local_file_path")]
+        public string LocalFilePath { get; set; }
 
         [BsonElement("date")]
         public Date Date { get; set; }
@@ -93,10 +117,10 @@ namespace Data
         public string Hostname { get; set; }
 
         [BsonElement("demo_tickrate")]
-        public int DemoTickRate { get; set; }
+        public float DemoTickRate { get; set; }
 
         [BsonElement("server_tickrate")]
-        public int ServerTickRate { get; set; }
+        public float ServerTickRate { get; set; }
 
         [BsonElement("duration")]
         public Duration Duration { get; set; }

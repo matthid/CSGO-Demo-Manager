@@ -7,7 +7,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Logging;
+
 namespace BackgroundTasks {
+    using Data;
     using TaskId = System.Guid;
     public interface IProgressReporter
     {
@@ -58,33 +61,45 @@ namespace BackgroundTasks {
         IObservable<TaskId> TaskCompleted { get; }
     }
 
-    public class BackgroundTask : IBackgroundTask, IProgressReporter
+    public sealed class BackgroundTask : IBackgroundTask, IProgressReporter, IDisposable
     {
         CancellationTokenSource tokSource = new CancellationTokenSource();
+        private readonly ILogger<BackgroundTaskManager> _logger;
         BackgroundTaskManager manager;
         Task _task = null;
         private ConcurrentQueue<string> _messages = new ConcurrentQueue<string>();
-        
-        public BackgroundTask(BackgroundTaskManager mgr, string name, bool canCancel)
+        private readonly Subject<double> _taskProgressChanged = new Subject<double>();
+
+        public BackgroundTask(ILogger<BackgroundTaskManager> logger, BackgroundTaskManager mgr, string name, bool canCancel)
         {
             Name = name;
             Id = System.Guid.NewGuid();
+            _logger = logger;
             manager = mgr;
             StartTime = DateTime.Now;
             CanCancel = canCancel;
+            _sub = _taskProgressChanged.ThrottleFirst(TimeSpan.FromSeconds(1), System.Reactive.Concurrency.Scheduler.Default).Subscribe(newProgress => mgr.OnProgessChanged(this.Id, newProgress));
             Progress = 0;
+        }
+
+        public void Dispose()
+        {
+            _sub.Dispose();
         }
 
         public string Name { get; }
         public TaskId Id { get; }
         public DateTime StartTime { get; }
         public bool CanCancel { get; }
+
+        private IDisposable _sub;
+
         public IEnumerable<string> Messages => _messages;
         public bool IsFinished => _task?.IsCompleted ?? false;
         public void Cancel() => tokSource.Cancel();
         public double Progress { get; private set; }
 
-        public void StartTask(Func<IProgressReporter, CancellationToken, Task> f)
+        internal void StartTask(Func<IProgressReporter, CancellationToken, Task> f, SemaphoreSlim maxTasks)
         {
             if (_task != null)
             {
@@ -92,25 +107,40 @@ namespace BackgroundTasks {
             }
 
             manager.OnStarted(this);
-            _task = f(this, tokSource.Token).ContinueWith(t =>
+            _task = Task.Run(async () =>
             {
-                if (!tokSource.IsCancellationRequested) {
+                try
+                {
+                    AddMessage($"Waiting for the task to be queued...");
+                    await maxTasks.WaitAsync();
+                    AddMessage($"Starting task...");
+                    await f(this, tokSource.Token);
+                }
+                finally
+                {
+                    maxTasks.Release();
+                }
+            }, tokSource.Token).ContinueWith(t =>
+            {
+                if (!tokSource.IsCancellationRequested)
+                {
                     SetProgress(100);
                 }
 
-                if (t.IsFaulted && t.Exception != null) {
+                if (t.IsFaulted && t.Exception != null)
+                {
+                    _logger.LogError(t.Exception, "Error in background task");
                     AddMessage($"Faulted: {t.Exception}");
                 }
 
                 manager.OnCompleted(Id);
             });
-            
         }
         
         public void SetProgress(double progress)
         {
             Progress = progress;
-            manager.OnProgessChanged(Id, progress);
+            _taskProgressChanged.OnNext(progress);
         }
 
         public void AddMessage(string message)
@@ -128,19 +158,31 @@ namespace BackgroundTasks {
         private readonly Subject<(TaskId id, string message)> _taskMessageChanged = new Subject<(TaskId id, string message)>();
         private readonly Subject<TaskId> _taskCompleted = new Subject<TaskId>();
         private readonly Subject<IBackgroundTask> _taskStarted = new Subject<IBackgroundTask>();
+        private readonly ILogger<BackgroundTaskManager> _logger;
+        private readonly SemaphoreSlim maxThread = new SemaphoreSlim(Math.Max(Environment.ProcessorCount - 3, 3)); // at least 3
 
-        public BackgroundTaskManager()
+        public BackgroundTaskManager(ILogger<BackgroundTaskManager> logger)
         {
+            _logger = logger;
         }
 
         public IEnumerable<IBackgroundTask> CurrentTasks => _tasks.Values;
-        
 
-        internal void OnProgessChanged(TaskId task, double progress) => _taskProgressChanged.OnNext((task, progress));
-        internal void OnMessageChanged(TaskId task, string message) => _taskMessageChanged.OnNext((task, message));
+
+        internal void OnProgessChanged(TaskId task, double progress)
+        {
+            _taskProgressChanged.OnNext((task, progress));
+            Console.WriteLine($"Task {task} changed to {progress} %");
+        }
+        internal void OnMessageChanged(TaskId task, string message)
+        {
+            _taskMessageChanged.OnNext((task, message));
+            Console.WriteLine($"Task {task}: {message}");
+        }
         internal void OnCompleted(TaskId task) {
             _taskCompleted.OnNext(task);
             _tasks.TryRemove(task, out var t);
+            (t as IDisposable)?.Dispose();
         }
         internal void OnStarted(IBackgroundTask task) => _taskStarted.OnNext(task);
         public IObservable<(TaskId id, double progress)> TaskProgressChanged => _taskProgressChanged;
@@ -149,10 +191,10 @@ namespace BackgroundTasks {
         public IObservable<IBackgroundTask> TaskStarted => _taskStarted;
         public TaskId StartTask(Func<IProgressReporter, CancellationToken, Task> createTask, string name, bool canCancel = false)
         {
-            var wrappedTask = new BackgroundTask(this, name, canCancel);
+            var wrappedTask = new BackgroundTask(_logger, this, name, canCancel);
             //_tasks.AddOrUpdate(wrappedTask.Id, ((k, res) => res), (k, t, res) => res, wrappedTask);
             _tasks.AddOrUpdate(wrappedTask.Id, ((k) => wrappedTask), (k, t) => wrappedTask);
-            wrappedTask.StartTask(createTask);
+            wrappedTask.StartTask(createTask, maxThread);
             return wrappedTask.Id;
         }
 
@@ -168,7 +210,7 @@ namespace BackgroundTasks {
             } 
             else
             {
-                Console.Error.WriteLine($"Task {id} unknown! {Environment.StackTrace}");
+                _logger.LogWarning("Task {id} unknown", id);
                 return false;
             }
         }
