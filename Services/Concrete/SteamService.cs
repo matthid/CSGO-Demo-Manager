@@ -122,8 +122,8 @@ namespace Services.Concrete
 					HttpResponseMessage result = await httpClient.GetAsync(url);
 					if (result.StatusCode == HttpStatusCode.OK)
 					{
-						string json = await result.Content.ReadAsStringAsync();
-						JObject o = JObject.Parse(json);
+						string summaryJson = await result.Content.ReadAsStringAsync();
+						JObject o = JObject.Parse(summaryJson);
 						var playerSummaryList = o.SelectToken("response.players.player").ToObject<List<PlayerSummary>>();
 						if (playerSummaryList == null) return null;
 
@@ -132,8 +132,8 @@ namespace Services.Concrete
 						result = await httpClient.GetAsync(url);
 						if (result.StatusCode == HttpStatusCode.OK)
 						{
-							json = await result.Content.ReadAsStringAsync();
-							o = JObject.Parse(json);
+							var banJson = await result.Content.ReadAsStringAsync();
+							o = JObject.Parse(banJson);
 							var playerBanList = o.SelectToken("players").ToObject<List<PlayerBan>>();
 							if (playerBanList == null) return null;
 
@@ -157,12 +157,29 @@ namespace Services.Concrete
 
 							foreach (PlayerBan playerBan in playerBanList)
 							{
-								suspects.First(pl => pl.SteamId == playerBan.SteamId).DaySinceLastBanCount = playerBan.DaysSinceLastBan;
-								suspects.First(pl => pl.SteamId == playerBan.SteamId).BanCount = playerBan.NumberOfVacBans;
-								suspects.First(pl => pl.SteamId == playerBan.SteamId).VacBanned = playerBan.VacBanned;
-								suspects.First(pl => pl.SteamId == playerBan.SteamId).CommunityBanned = playerBan.CommunityBanned;
-								suspects.First(pl => pl.SteamId == playerBan.SteamId).EconomyBan = playerBan.EconomyBan;
-								suspects.First(pl => pl.SteamId == playerBan.SteamId).GameBanCount = playerBan.NumberOfGameBans;
+								var suspect = suspects.FirstOrDefault(pl => pl.SteamId == playerBan.SteamId);
+                                if (suspect == null)
+                                {
+                                    // Account was deleted...
+                                    suspect = new Suspect
+                                    {
+                                        SteamId = playerBan.SteamId,
+                                        ProfileUrl = $"https://steamcommunity.com/profiles/{playerBan.SteamId}/",
+                                        Nickname = "<deleted>",
+                                        CurrentStatus = 0,
+                                        ProfileState = 0,
+                                        AvatarUrl = "https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg",
+                                        CommunityVisibilityState = 0
+                                    };
+                                    suspects.Add(suspect);
+                                }
+
+                                suspect.DaySinceLastBanCount = playerBan.DaysSinceLastBan;
+								suspect.BanCount = playerBan.NumberOfVacBans;
+								suspect.VacBanned = playerBan.VacBanned;
+								suspect.CommunityBanned = playerBan.CommunityBanned;
+								suspect.EconomyBan = playerBan.EconomyBan;
+								suspect.GameBanCount = playerBan.NumberOfGameBans;
 							}
 						}
 					}

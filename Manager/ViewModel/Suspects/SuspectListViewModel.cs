@@ -420,7 +420,17 @@ namespace Manager.ViewModel.Suspects
 							List<Demo> demos = new List<Demo>();
 							foreach (Suspect suspect in SelectedSuspects)
 							{
-								demos = demos.Concat(await _demosService.GetDemosPlayer(suspect.SteamId)).ToList();
+                                try
+                                {
+                                    demos = demos.Concat(await _demosService.GetDemosPlayer(suspect.SteamId)).ToList();
+								}
+                                catch (Exception e)
+                                {
+									Logger.Instance.Log(e);
+                                    await _dialogService.ShowErrorAsync(
+                                        "Error while trying to retrieve demos, see logfile",
+                                        MessageDialogStyle.Affirmative);
+                                }
 							}
 							IsRefreshing = false;
 							if (!demos.Any())
