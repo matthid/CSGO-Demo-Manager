@@ -199,3 +199,6 @@ src/CSGO Demos Manager.csproj.DotSettings
 .idea/
 csgo-demos-manager-*.exe
 lib
+
+
+.ionide/
