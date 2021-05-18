@@ -321,7 +321,32 @@ namespace Services.Design
 			ObservableCollection<Player> players = new ObservableCollection<Player>();
 			Random random = new Random();
 
-			ObservableCollection<EntryKillEvent> entryKills = new ObservableCollection<EntryKillEvent>();
+            ObservableCollection<EntryKillEvent> entryKills = new ObservableCollection<EntryKillEvent>();
+			for (int j = 0; j < 10; j++)
+            {
+                Player player = new Player
+                {
+                    Name = "player" + (j + 1),
+                    HeadshotCount = random.Next(14),
+                    OneKillCount = random.Next(10, 30),
+                    TwoKillCount = random.Next(10, 20),
+                    ThreeKillCount = random.Next(0, 10),
+                    FourKillCount = random.Next(0, 5),
+                    FiveKillCount = random.Next(0, 2),
+                    BombDefusedCount = random.Next(0, 2),
+                    BombPlantedCount = random.Next(0, 2),
+                    EntryKills = entryKills,
+                    DeathCount = random.Next(0, 32),
+                    KillCount = random.Next(30),
+                    AssistCount = random.Next(15),
+                    Score = random.Next(10, 80),
+                    RoundMvpCount = random.Next(6)
+                };
+
+                player.EnableUpdates();
+                players.Add(player);
+            }
+
 			for (int indexEntryKill = 0; indexEntryKill < random.Next(5); indexEntryKill++)
 			{
 				currentTick *= indexEntryKill;
@@ -339,30 +364,6 @@ namespace Services.Design
 				entryKills.Add(entryKill);
 			}
 
-			for (int j = 0; j < 10; j++)
-			{
-				Player player = new Player
-				{
-					Name = "player" + (j + 1),
-					HeadshotCount = random.Next(14),
-					OneKillCount = random.Next(10, 30),
-					TwoKillCount = random.Next(10, 20),
-					ThreeKillCount = random.Next(0, 10),
-					FourKillCount = random.Next(0, 5),
-					FiveKillCount = random.Next(0, 2),
-					BombDefusedCount = random.Next(0, 2),
-					BombPlantedCount = random.Next(0, 2),
-					EntryKills = entryKills,
-					DeathCount = random.Next(0, 32),
-					KillCount = random.Next(30),
-					AssistCount = random.Next(15),
-					Score = random.Next(10, 80),
-					RoundMvpCount = random.Next(6)
-				};
-
-                player.EnableUpdates();
-				players.Add(player);
-			}
 
 			currentTick = 1;
 			ObservableCollection<Round> rounds = new ObservableCollection<Round>();

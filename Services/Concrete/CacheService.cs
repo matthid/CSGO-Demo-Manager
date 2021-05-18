@@ -122,7 +122,16 @@ namespace Services.Concrete
 					Match match = _demoFilePattern.Match(file);
 					if (match.Success)
 					{
-						string json = File.ReadAllText(file);
+                        string json;
+                        try
+                        {
+                            json = File.ReadAllText(file);
+                        }
+                        catch (IOException e)
+                        {
+                            Logger.Instance.Log(new Exception($"Exception while trying to read '{file}'. Consider deleting this file!"));
+							continue;
+                        }
 						try
 						{
 							Demo demo = await Task.Factory.StartNew(() => JsonConvert.DeserializeObject<Demo>(json, _settingsJson));

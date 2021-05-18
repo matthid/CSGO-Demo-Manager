@@ -1319,6 +1319,7 @@ namespace Services.Concrete.Analyzer
 			string message = string.Empty;
 			if (e.Sender != null) message += e.Sender.Name + ": ";
 			message += e.Text;
+			
 			Demo.ChatMessageList.Add(message);
 		}
 
