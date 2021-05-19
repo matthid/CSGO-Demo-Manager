@@ -192,9 +192,10 @@ namespace Services.Concrete.Analyzer
 			{
 				parser.ParseHeader();
 			}
-			catch (Exception)
+			catch (Exception e)
 			{
 				// Silently ignore no CSGO demos or unreadable file
+				Logger.Instance.Log(new FormatException($"The file '{pathDemoFile}' could not be read", e));
 				return null;
 			}
 
