@@ -109,14 +109,28 @@ namespace Services.Concrete
 			return suspect;
 		}
 
-		public async Task<List<Suspect>> GetBanStatusForUserList(List<string> users)
+        public async Task<List<Suspect>> GetBanStatusForUserList(List<string> users)
+        {
+            // Split list to 100 elements as Steam API allow to request by 100 SteamID maximum
+			var batched = users.Batch(100);
+            var result = new List<Suspect>();
+            foreach (var userBatch in batched)
+            {
+                var batchResult = await GetBanStatusForUserListUrlLimit(userBatch);
+				result.AddRange(batchResult);
+            }
+
+            return result;
+        }
+
+        private async Task<List<Suspect>> GetBanStatusForUserListUrlLimit(IEnumerable<string> users)
 		{
 			List<Suspect> suspects = new List<Suspect>();
 			try
 			{
 				using (var httpClient = new HttpClient())
 				{
-					string ids = string.Join(",", users.ToArray());
+					string ids = string.Join(",", users);
 					//  Grab general infos from user
 					string url = string.Format(PLAYERS_SUMMARIES_URL, Properties.Resources.steam_api_key, ids);
 					HttpResponseMessage result = await httpClient.GetAsync(url);
@@ -301,7 +315,7 @@ namespace Services.Concrete
 			List<string> steamIdBannedList = new List<string>();
 			// Add new banned suspects to the returned list
 			if (idToCheck.Any())
-			{
+            {
 				IEnumerable<Suspect> suspects = await GetBanStatusForUserList(idToCheck);
 				foreach (Suspect suspect in suspects)
 				{

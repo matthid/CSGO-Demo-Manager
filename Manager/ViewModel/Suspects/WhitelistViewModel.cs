@@ -366,18 +366,13 @@ namespace Manager.ViewModel.Suspects
 
 			if (suspectsIdList.Any())
 			{
-				// Split list to 100 elements as Steam API allow to request by 100 SteamID maximum
-				IEnumerable<IEnumerable<string>> ids = suspectsIdList.Batch(100);
 				try
 				{
-					foreach (IEnumerable<string> idList in ids)
-					{
-						IEnumerable<Suspect> suspects = await _steamService.GetBanStatusForUserList(idList.ToList());
-						foreach (Suspect suspect in suspects)
-						{
-							Suspects.Add(suspect);
-						}
-					}
+                    IEnumerable<Suspect> suspects = await _steamService.GetBanStatusForUserList(suspectsIdList.ToList());
+                    foreach (Suspect suspect in suspects)
+                    {
+                        Suspects.Add(suspect);
+                    }
 				}
 				catch (Exception e)
 				{
