@@ -5,6 +5,8 @@ namespace Database
 {
     public class SqLiteBaseRepository : IDisposable
     {
+        public static readonly bool UseDatabaseImpl = true;
+
         private SQLiteConnection _connection;
 
         public static string DbFile
@@ -38,7 +40,7 @@ namespace Database
         {
 
         }
-
+        
         public void Dispose()
         {
             _connection?.Dispose();

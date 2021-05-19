@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Core.Models;
 using NPOI.SS.UserModel;
+using Services.Interfaces;
 
 namespace Services.Concrete.Excel.Sheets.Single
 {
@@ -49,7 +50,7 @@ namespace Services.Concrete.Excel.Sheets.Single
 			Sheet = workbook.CreateSheet("Rounds");
 		}
 
-		public override async Task GenerateContent()
+		public override async Task GenerateContent(ICacheService cacheService)
 		{
 			var rowNumber = 1;
 

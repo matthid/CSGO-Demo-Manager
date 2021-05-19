@@ -4,6 +4,7 @@ using Core.Models;
 using Core.Models.Events;
 using DemoInfo;
 using NPOI.SS.UserModel;
+using Services.Interfaces;
 using Services.Models.Excel;
 
 namespace Services.Concrete.Excel.Sheets.Multiple
@@ -27,7 +28,7 @@ namespace Services.Concrete.Excel.Sheets.Multiple
 			Sheet = workbook.CreateSheet("Weapons");
 		}
 
-		public override async Task GenerateContent()
+		public override async Task GenerateContent(ICacheService cacheService)
 		{
 			await Task.Factory.StartNew(() =>
 			{

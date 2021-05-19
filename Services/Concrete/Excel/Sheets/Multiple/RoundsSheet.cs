@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Core.Models;
 using NPOI.SS.UserModel;
+using Services.Interfaces;
 
 namespace Services.Concrete.Excel.Sheets.Multiple
 {
@@ -50,11 +51,10 @@ namespace Services.Concrete.Excel.Sheets.Multiple
 			Sheet = workbook.CreateSheet("Rounds");
 		}
 
-		public override async Task GenerateContent()
+		public override async Task GenerateContent(ICacheService cacheService)
 		{
 			foreach (Demo demo in Demos)
 			{
-				CacheService cacheService = new CacheService();
 				demo.WeaponFired = await cacheService.GetDemoWeaponFiredAsync(demo);
 			}
 

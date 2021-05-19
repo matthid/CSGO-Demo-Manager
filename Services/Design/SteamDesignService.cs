@@ -133,5 +133,10 @@ namespace Services.Design
 		{
 			return Task.FromResult(0);
 		}
-	}
+
+        public Task<List<string>> GetNewSuspectBannedArray(List<string> steamIdList, List<string> bannedSteamIdList)
+        {
+            return Task.FromResult(new List<string>() {"test_banned"});
+        }
+    }
 }

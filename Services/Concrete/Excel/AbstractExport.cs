@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
+using Services.Interfaces;
 
 namespace Services.Concrete.Excel
 {
@@ -8,6 +9,6 @@ namespace Services.Concrete.Excel
 	{
 		protected readonly IWorkbook Workbook = new XSSFWorkbook();
 
-		public abstract Task<IWorkbook> Generate();
+		public abstract Task<IWorkbook> Generate(ICacheService cacheService);
 	}
 }

@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using Core.Models;
 using NPOI.SS.UserModel;
 using Services.Concrete.Excel.Sheets.Single;
+using Services.Interfaces;
 
 namespace Services.Concrete.Excel
 {
@@ -40,36 +41,35 @@ namespace Services.Concrete.Excel
 			_demo = demo;
 		}
 
-		public override async Task<IWorkbook> Generate()
+		public override async Task<IWorkbook> Generate(ICacheService cacheService)
 		{
-			CacheService cacheService = new CacheService();
 			_demo.WeaponFired = await cacheService.GetDemoWeaponFiredAsync(_demo);
 			_generalSheet = new GeneralSheet(Workbook, _demo);
-			await _generalSheet.Generate();
+			await _generalSheet.Generate(cacheService);
 			_playersSheet = new PlayersSheet(Workbook, _demo);
-			await _playersSheet.Generate();
+			await _playersSheet.Generate(cacheService);
 			_roundsSheet = new RoundsSheet(Workbook, _demo);
-			await _roundsSheet.Generate();
+			await _roundsSheet.Generate(cacheService);
 			_killsSheet = new KillsSheet(Workbook, _demo);
-			await _killsSheet.Generate();
+			await _killsSheet.Generate(cacheService);
 			_entryHoldKillsRoundSheet = new EntryHoldKillsRoundSheet(Workbook, _demo);
-			await _entryHoldKillsRoundSheet.Generate();
+			await _entryHoldKillsRoundSheet.Generate(cacheService);
 			_entryHoldKillsPlayerSheet = new EntryHoldKillsPlayerSheet(Workbook, _demo);
-			await _entryHoldKillsPlayerSheet.Generate();
+			await _entryHoldKillsPlayerSheet.Generate(cacheService);
 			_entryHoldKillsTeamSheet = new EntryHoldKillsTeamSheet(Workbook, _demo);
-			await _entryHoldKillsTeamSheet.Generate();
+			await _entryHoldKillsTeamSheet.Generate(cacheService);
 			_entryKillsRoundSheet = new EntryKillsRoundSheet(Workbook, _demo);
-			await _entryKillsRoundSheet.Generate();
+			await _entryKillsRoundSheet.Generate(cacheService);
 			_entryKillsPlayerSheet = new EntryKillsPlayerSheet(Workbook, _demo);
-			await _entryKillsPlayerSheet.Generate();
+			await _entryKillsPlayerSheet.Generate(cacheService);
 			_entryKillsTeamSheet = new EntryKillsTeamSheet(Workbook, _demo);
-			await _entryKillsTeamSheet.Generate();
+			await _entryKillsTeamSheet.Generate(cacheService);
 			_killMatrixSheet = new KillMatrixSheet(Workbook, _demo);
-			await _killMatrixSheet.Generate();
+			await _killMatrixSheet.Generate(cacheService);
 			_flashMatrixPlayersSheet = new FlashMatrixPlayersSheet(Workbook, _demo);
-			await _flashMatrixPlayersSheet.Generate();
+			await _flashMatrixPlayersSheet.Generate(cacheService);
 			_flashMatrixTeamsSheet = new FlashMatrixTeamsSheet(Workbook, _demo);
-			await _flashMatrixTeamsSheet.Generate();
+			await _flashMatrixTeamsSheet.Generate(cacheService);
 
 			return Workbook;
 		}

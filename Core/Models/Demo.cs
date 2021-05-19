@@ -417,11 +417,19 @@ namespace Core.Models
         /// </summary>
         private bool _keepUpdated = false;
 
-        #endregion
+		#endregion
 
-        #region Accessors
+		#region Accessors
+#if DEBUG
+		[JsonIgnore]
+        public string SourceCacheFile
+        {
+            get;
+            set;
+        }
+#endif
 
-        [JsonProperty("id")]
+		[JsonProperty("id")]
 		public string Id
 		{
 			get { return _id; }

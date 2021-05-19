@@ -22,6 +22,7 @@ namespace Database
     {
         Demo GetDemo(string id);
         void SaveDemo(Demo customer);
+        List<Demo> QueryDemosOfUser(long steamId);
     }
 
     public class SqLiteDemoRepository : SqLiteBaseRepository, IDemoRepository
@@ -34,18 +35,43 @@ namespace Database
                     return Convert.ToBase64String(SHA256.ComputeHash(fileStream));
             }
         }
-        
+
+        private long FromStatus(string status)
+        {
+            switch (status.ToLowerInvariant())
+            {
+                case "none":
+                    return 0;
+                case "error":
+                    return 1;
+                default:
+                    throw new InvalidOperationException($"Unknown status '{status}'");
+            }
+        }
+
+        private string ToStatus(long status)
+        {
+            switch (status)
+            {
+                case 0:
+                    return "None";
+                case 1:
+                    return "error";
+                default:
+                    throw new InvalidOperationException($"Unknown watch status '{status}' in database.");
+            }
+        }
 
         public void SaveDemo(Demo demo)
         {
             var cnn = GetConnection();
             DateTime lastAccess = DateTime.MinValue;
             string sha256 = null;
-            if (File.Exists(demo.Path))
-            {
-                lastAccess = File.GetLastWriteTimeUtc(demo.Path);
-                sha256 = SHA256CheckSum(demo.Path);
-            }
+            //if (File.Exists(demo.Path))
+            //{
+            //    lastAccess = File.GetLastWriteTimeUtc(demo.Path);
+            //    sha256 = SHA256CheckSum(demo.Path);
+            //}
 
             var fileId = cnn.Query<long>(
                 @"INSERT INTO FileRef
@@ -74,7 +100,7 @@ namespace Database
                     Id = demo.Id, Name = demo.Name, Date = demo.Date, Source = demo.SourceName, ClientName = demo.ClientName, HostName = demo.Hostname,
                     IsGOTV = demo.Type == "GOTV" ? 1 : 0, DemoTickrate = demo.Tickrate, HostTickrate = demo.ServerTickrate, Duration = demo.Duration,
                     Ticks = demo.Ticks, MapName = demo.MapName, FileRef = fileId, Comment = demo.Comment,
-                    WatchStatus = demo.Status == "None" ? 0 : throw new InvalidOperationException($"Unknown status '{demo.Status}'"),
+                    WatchStatus = FromStatus(demo.Status),
                     CTStartingTeamFirstHalfScore = demo.TeamCT.ScoreFirstHalf,
                     TStartingTeamFirstHalfScore = demo.TeamT.ScoreFirstHalf,
                     CTStartingTeamSecondHalfScore = demo.TeamCT.ScoreSecondHalf,
@@ -142,6 +168,23 @@ namespace Database
             }
         }
 
+        public List<Demo> QueryDemosOfUser(long steamId)
+        {
+            var cnn = GetConnection();
+            var result = cnn.Query(
+                @"SELECT Demo
+        FROM PlayerInDemo
+        WHERE SteamId = @steamId", new {steamId});
+
+            var ret = new List<Demo>();
+            foreach (var demo in result)
+            {
+                ret.Add(GetDemo(demo.Demo));
+            }
+
+            return ret;
+        }
+
         public Demo GetDemo(string id)
         {
             var cnn = GetConnection();
@@ -179,7 +222,7 @@ namespace Database
                 MapName = result.MapName,
                 Path = fileRefResult.Path,
                 Comment = result.Comment,
-                Status = result.WatchStatus == 0 ? "None" : throw new InvalidOperationException($"Unknown watch status '{result.WatchStatus}' in database."),
+                Status = ToStatus(result.WatchStatus),
             };
 
             var ctTeam = demo.TeamCT;

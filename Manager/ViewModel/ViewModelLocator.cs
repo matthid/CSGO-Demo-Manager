@@ -7,6 +7,8 @@ using Manager.ViewModel.Players;
 using Manager.ViewModel.Rounds;
 using Manager.ViewModel.Suspects;
 using CommonServiceLocator;
+using Database;
+using Database.Services;
 using Services.Concrete;
 using Services.Concrete.Excel;
 using Services.Concrete.Maps;
@@ -20,6 +22,12 @@ namespace Manager.ViewModel
 		public ViewModelLocator()
 		{
 			ServiceLocator.SetLocatorProvider(() => SimpleIoc.Default);
+
+            if (SimpleIoc.Default.IsRegistered<ISteamService>())
+            {
+				// Already registered before...
+                return;
+            }
 
 			if (ViewModelBase.IsInDesignModeStatic)
 			{
@@ -41,9 +49,24 @@ namespace Manager.ViewModel
 			else
 			{
 				// Create run time view services and models
-				SimpleIoc.Default.Register<IDemosService, DemosService>();
 				SimpleIoc.Default.Register<ISteamService, SteamService>();
-				SimpleIoc.Default.Register<ICacheService, CacheService>();
+                if (SqLiteBaseRepository.UseDatabaseImpl)
+                {
+					// Use faster database frontend
+                    SimpleIoc.Default.Register<IDatabaseProvider>(() => new DatabaseProviderService());
+                    SimpleIoc.Default.Register<DatabaseCacheService>(() => new DatabaseCacheService(new CacheService(), SimpleIoc.Default.GetInstance<IDatabaseProvider>()));
+                    SimpleIoc.Default.Register<ICacheService>(() => SimpleIoc.Default.GetInstance<DatabaseCacheService>());
+					SimpleIoc.Default.Register<IDemosService>(() => 
+                        new DatabaseDemosService(
+                            new DemosService(SimpleIoc.Default.GetInstance<ISteamService>(), SimpleIoc.Default.GetInstance<ICacheService>()),
+                            SimpleIoc.Default.GetInstance<DatabaseCacheService>(),
+							SimpleIoc.Default.GetInstance<IDatabaseProvider>()));
+				}
+                else
+				{
+					SimpleIoc.Default.Register<ICacheService, CacheService>();
+					SimpleIoc.Default.Register<IDemosService, DemosService>();
+				}
 				SimpleIoc.Default.Register<ExcelService, ExcelService>();
 				SimpleIoc.Default.Register<IFlashbangService, FlashbangService>();
 				SimpleIoc.Default.Register<IKillService, KillService>();

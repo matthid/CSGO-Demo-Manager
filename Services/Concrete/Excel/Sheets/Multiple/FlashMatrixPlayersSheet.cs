@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Core.Models;
 using NPOI.SS.UserModel;
+using Services.Interfaces;
 
 namespace Services.Concrete.Excel.Sheets.Multiple
 {
@@ -16,7 +17,7 @@ namespace Services.Concrete.Excel.Sheets.Multiple
 			Sheet = workbook.CreateSheet("Flash matrix players");
 		}
 
-		public override async Task GenerateContent()
+		public override async Task GenerateContent(ICacheService cacheService)
 		{
 			// store players row and columns index
 			Dictionary<long, int> playersRow = new Dictionary<long, int>();
@@ -33,7 +34,6 @@ namespace Services.Concrete.Excel.Sheets.Multiple
 			IRow row;
 			foreach (Demo demo in Demos)
 			{
-				CacheService cacheService = new CacheService();
 				demo.PlayerBlinded = await cacheService.GetDemoPlayerBlindedAsync(demo);
 
 				// create rows and columns with only players name

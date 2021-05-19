@@ -34,14 +34,15 @@ namespace Services.Concrete
 
 		public bool IgnoreLaterBan { get; set; }
 
-		private readonly CacheService _cacheService = new CacheService();
+		private readonly ICacheService _cacheService;
 
 		private readonly ISteamService _steamService;
 
-		public DemosService(ISteamService steamService)
+		public DemosService(ISteamService steamService, ICacheService cacheService)
 		{
 			_steamService = steamService;
-		}
+            _cacheService = cacheService;
+        }
 
 		/// <summary>
 		/// Check if there are banned players and update their banned flags

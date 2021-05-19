@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using NPOI.SS.UserModel;
+using Services.Interfaces;
 
 namespace Services.Concrete.Excel.Sheets
 {
@@ -11,7 +12,7 @@ namespace Services.Concrete.Excel.Sheets
 
 		protected Dictionary<string, CellType> Headers;
 
-		public abstract Task GenerateContent();
+		public abstract Task GenerateContent(ICacheService cacheService);
 
 		protected async Task GenerateHeaders()
 		{
@@ -29,10 +30,10 @@ namespace Services.Concrete.Excel.Sheets
 			});
 		}
 
-		public async Task Generate()
+		public async Task Generate(ICacheService cacheService)
 		{
 			await GenerateHeaders();
-			await GenerateContent();
+			await GenerateContent(cacheService);
 		}
 
 		public void SetCellValue(IRow row, int index, CellType cellType, dynamic value)

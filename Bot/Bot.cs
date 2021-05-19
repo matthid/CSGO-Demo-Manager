@@ -4,15 +4,18 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Core;
+using Database;
+using Database.Services;
 using Services.Concrete;
+using Services.Interfaces;
 
 namespace SuspectsBot
 {
 	public class Bot
 	{
-		private readonly SteamService _steamService;
+		private readonly ISteamService _steamService;
 
-		private readonly CacheService _cacheService;
+		private readonly ICacheService _cacheService;
 
 		public bool IsRunning { get; set; }
 
@@ -73,8 +76,16 @@ namespace SuspectsBot
 
 		public Bot()
 		{
-			_cacheService = new CacheService();
-			_steamService = new SteamService();
+            _steamService = new SteamService();
+			if (SqLiteBaseRepository.UseDatabaseImpl)
+            {
+                var dbProvider = new DatabaseProviderService();
+				_cacheService = new DatabaseCacheService(new CacheService(), dbProvider);
+			}
+            else
+            {
+                _cacheService = new CacheService();
+			}
 			Start();
 		}
 

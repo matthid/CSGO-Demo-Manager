@@ -12,6 +12,13 @@ namespace Services.Concrete
 {
 	public class PlayerService : IPlayerService
 	{
+        private readonly ICacheService _cache;
+
+        public PlayerService(ICacheService cache)
+        {
+            _cache = cache;
+        }
+
 		public async Task<List<PlayerRoundStats>> GetPlayerRoundStatsListAsync(Demo demo, Round round)
 		{
 			List<PlayerRoundStats> data = new List<PlayerRoundStats>();
@@ -67,9 +74,8 @@ namespace Services.Concrete
 		public async Task<List<PlayerRoundStats>> GetRoundListStatsAsync(Demo demo, Player player)
 		{
 			List<PlayerRoundStats> data = new List<PlayerRoundStats>();
-
-			CacheService cacheService = new CacheService();
-			demo.WeaponFired = await cacheService.GetDemoWeaponFiredAsync(demo);
+			
+			demo.WeaponFired = await _cache.GetDemoWeaponFiredAsync(demo);
 			foreach (Round round in demo.Rounds)
 			{
 				int shotCount = demo.WeaponFired.Where(w => w.RoundNumber == round.Number).Count(k => k.ShooterSteamId == player.SteamId);

@@ -51,5 +51,8 @@ namespace Services.Interfaces
 		/// <param name="steamUrlOrSteamId"></param>
 		/// <returns></returns>
 		Task<string> GetSteamIdFromUrlOrSteamId(string steamUrlOrSteamId);
-	}
+
+
+        Task<List<string>> GetNewSuspectBannedArray(List<string> steamIdList, List<string> bannedSteamIdList);
+    }
 }

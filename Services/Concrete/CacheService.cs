@@ -11,6 +11,7 @@ using Core.Models;
 using Core.Models.Events;
 using Core.Models.Serialization;
 using Core.Models.Source;
+using Services.Concrete.Analyzer;
 using Services.Interfaces;
 using Services.Models;
 
@@ -113,39 +114,85 @@ namespace Services.Concrete
 		public async Task<List<Demo>> GetDemoListAsync()
 		{
 			List<Demo> demos = new List<Demo>();
-			string[] fileList = Directory.GetFiles(_pathFolderCache);
-
-			foreach (string file in fileList)
+            await Task.Factory.StartNew(() =>
 			{
-				if (File.Exists(file))
-				{
-					Match match = _demoFilePattern.Match(file);
-					if (match.Success)
-					{
-                        string json;
-                        try
-                        {
-                            json = File.ReadAllText(file);
-                        }
-                        catch (IOException e)
-                        {
-                            Logger.Instance.Log(new Exception($"Exception while trying to read '{file}'. Consider deleting this file!", e));
-							continue;
-                        }
-						try
-						{
-							Demo demo = await Task.Factory.StartNew(() => JsonConvert.DeserializeObject<Demo>(json, _settingsJson));
-							demos.Add(demo);
-						}
-						catch (Exception e)
-						{
-							Logger.Instance.Log(e);
-							throw;
-						}
-					}
-				}
-			}
+				string[] fileList = Directory.GetFiles(_pathFolderCache);
+				
+                Dictionary<string, int> previousIdx = new Dictionary<string, int>();
+				Dictionary<string, string> correctIds = new Dictionary<string, string>();
 
+                string GetCorrectId(string path)
+                {
+                    if (correctIds.TryGetValue(path, out var id))
+                    {
+                        return id;
+                    }
+
+                    var analyzedDemo = DemoAnalyzer.ParseDemoHeader(path);
+					correctIds.Add(path, analyzedDemo.Id);
+                    return analyzedDemo.Id;
+                }
+
+				foreach (string file in fileList)
+                {
+                    if (File.Exists(file))
+                    {
+                        Match match = _demoFilePattern.Match(file);
+                        if (match.Success)
+                        {
+                            
+
+                            string json;
+                            try
+                            {
+                                json = File.ReadAllText(file);
+                            }
+                            catch (IOException e)
+                            {
+                                Logger.Instance.Log(new Exception($"Exception while trying to read '{file}'. Consider deleting this file!", e));
+                                continue;
+                            }
+                            try
+                            {
+                                Demo demo = JsonConvert.DeserializeObject<Demo>(json, _settingsJson);
+#if DEBUG
+                                demo.SourceCacheFile = file;
+#endif
+                                if (previousIdx.TryGetValue(demo.Path, out var idx))
+                                {
+                                    // File already added before
+                                    var correctId = GetCorrectId(demo.Path);
+                                    if (correctId == demo.Id)
+                                    {
+                                        var old = demos[idx];
+#if DEBUG
+										Console.WriteLine("TO DELETE: " + old.SourceCacheFile);
+#endif
+										demos[idx] = demo;
+                                    }
+                                    else
+									{
+#if DEBUG
+										Console.WriteLine("TO DELETE: " + file);
+#endif
+									}
+								}
+                                else
+                                {
+                                    previousIdx.Add(demo.Path, demos.Count);
+                                    demos.Add(demo);
+								}
+                            }
+                            catch (Exception e)
+                            {
+                                Logger.Instance.Log(e);
+                                throw;
+                            }
+                        }
+                    }
+                }
+			});
+			
 			return demos;
 		}
 

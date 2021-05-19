@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Core.Models;
 using NPOI.SS.UserModel;
+using Services.Interfaces;
 
 namespace Services.Concrete.Excel.Sheets.Multiple
 {
@@ -63,7 +64,7 @@ namespace Services.Concrete.Excel.Sheets.Multiple
 			Sheet = workbook.CreateSheet("General");
 		}
 
-		public override async Task GenerateContent()
+		public override async Task GenerateContent(ICacheService cacheService)
 		{
 			await Task.Factory.StartNew(() =>
 			{
