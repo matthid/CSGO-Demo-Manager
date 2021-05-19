@@ -85,6 +85,61 @@ namespace Database
                     WinningTeam = demo.Winner == null ? null : (demo.Winner == demo.TeamCT ? (int?)0 : 1)
                 });
             Debug.Assert(ret == 1);
+
+            foreach (var (team, demoPlayer) in new []{ demo.TeamCT.Players.Select(p => (demo.TeamCT, p)), demo.TeamT.Players.Select(p => (demo.TeamT, p)) }.SelectMany(t => t))
+            {
+                cnn.Execute(
+                    @"INSERT INTO PlayerInDemo
+                (SteamId, Demo, StartingTeam, Name, KillCount, FlashbangThrownCount, SmokeThrownCount, HeThrownCount, MolotovThrownCount, IncendiaryThrownCount, DecoyThrownCount,
+                 TradeKillCount, BombPlantedCount,BombDefusedCount, BombExplodedCount, CrouchKillCount, JumpKillCount, HitCount,
+                 HeadshotCount, DeathCount, AssistCount, EntryKillCount, MvpCount, TeamKillCount, RoundPlayedCount,
+                 AverageHltvRating, AverageEseaRws, OneKillCount, TwoKillCount, ThreeKillCount, FourKillCount, FiveKillCount) VALUES
+                (@SteamId, @Demo, @StartingTeam, @Name, @KillCount,@FlashbangThrownCount, @SmokeThrownCount, @HeThrownCount, @MolotovThrownCount, @IncendiaryThrownCount, @DecoyThrownCount,
+                 @TradeKillCount, @BombPlantedCount, @BombDefusedCount, @BombExplodedCount, @CrouchKillCount, @JumpKillCount, @HitCount,
+                 @HeadshotCount, @DeathCount, @AssistCount, @EntryKillCount, @MvpCount, @TeamKillCount, @RoundPlayedCount,
+                 @AverageHltvRating, @AverageEseaRws, @OneKillCount, @TwoKillCount, @ThreeKillCount, @FourKillCount, @FiveKillCount)", new
+                    {
+                        SteamId               = demoPlayer.SteamId,
+                        Demo                  = demo.Id,
+                        StartingTeam          = team == demo.TeamCT ? 0 : 1,
+                        Name                  = demoPlayer.Name,
+                        KillCount             = demoPlayer.KillCount,
+                        FlashbangThrownCount  = demoPlayer.FlashbangThrownCount,
+                        SmokeThrownCount      = demoPlayer.SmokeThrownCount,
+                        HeThrownCount         = demoPlayer.HeGrenadeThrownCount,
+                        MolotovThrownCount    = demoPlayer.MolotovThrownCount,
+                        IncendiaryThrownCount = demoPlayer.IncendiaryThrownCount,
+                        DecoyThrownCount      = demoPlayer.DecoyThrownCount,
+                        TradeKillCount        = demoPlayer.TradeKillCount,
+                        BombPlantedCount      = demoPlayer.BombPlantedCount,
+                        BombDefusedCount      = demoPlayer.BombDefusedCount,
+                        BombExplodedCount     = demoPlayer.BombExplodedCount,
+                        CrouchKillCount       = demoPlayer.CrouchKillCount,
+                        JumpKillCount         = demoPlayer.JumpKillCount,
+                        //WeaponFiredCount      = demoPlayer,
+                        HitCount              = demoPlayer.HitCount,
+                        HeadshotCount         = demoPlayer.HeadshotCount,
+                        DeathCount            = demoPlayer.DeathCount,
+                        AssistCount           = demoPlayer.AssistCount,
+                        EntryKillCount        = demoPlayer.EntryKills.Count,
+                        MvpCount              = demoPlayer.RoundMvpCount,
+                        //KnifeKillCount        = demoPlayer.Kill,
+                        TeamKillCount         = demoPlayer.TeamKillCount,
+                        //DamageHealthCount     = demoPlayer.DamageHealthCount,
+                        //DamageArmorCount      = demoPlayer.DamageArmorCount,
+                        RoundPlayedCount      = demoPlayer.RoundPlayedCount,
+                        AverageHltvRating     = demoPlayer.RatingHltv,
+                        AverageEseaRws        = demoPlayer.EseaRws,
+                        OneKillCount          = demoPlayer.OneKillCount,
+                        TwoKillCount          = demoPlayer.TwoKillCount,
+                        ThreeKillCount        = demoPlayer.ThreeKillCount,
+                        FourKillCount         = demoPlayer.FourKillCount,
+                        FiveKillCount         = demoPlayer.FiveKillCount,
+                        //ClutchCount           = demoPlayer.Clu,
+                        //ClutchWonCount        = ,
+                        //ClutchLostCount       = ,
+                    });
+            }
         }
 
         public Demo GetDemo(string id)
@@ -97,19 +152,11 @@ namespace Database
         FROM Demo
         WHERE Id = @id", new { id }).FirstOrDefault();
 
-            var ctTeam = new Team();
-            ctTeam.ScoreFirstHalf = (int)result.CTStartingTeamFirstHalfScore;
-            ctTeam.ScoreSecondHalf = (int)result.CTStartingTeamSecondHalfScore;
-            ctTeam.Name = result.CTStartingTeamName;
-            var tTeam = new Team();
-            tTeam.ScoreFirstHalf = (int)result.TStartingTeamFirstHalfScore;
-            tTeam.ScoreSecondHalf = (int)result.TStartingTeamSecondHalfScore;
-            tTeam.Name = result.TStartingTeamName;
-
-            var surrendingTeam =
-                result.SurrendingTeam == null ? null : (result.SurrendingTeam == 0 ? ctTeam : tTeam);
-            var winningTeam =
-                result.WinningTeam == null ? null : (result.WinningTeam == 0 ? ctTeam : tTeam);
+            if (result == null)
+            {
+                return null;
+            }
+            
 
             var fileRefResult = cnn.Query(
                 @"SELECT Path
@@ -133,17 +180,81 @@ namespace Database
                 Path = fileRefResult.Path,
                 Comment = result.Comment,
                 Status = result.WatchStatus == 0 ? "None" : throw new InvalidOperationException($"Unknown watch status '{result.WatchStatus}' in database."),
-                TeamCT = ctTeam,
-                TeamT = tTeam,
-                Winner = winningTeam,
-                Surrender = surrendingTeam,
             };
+
+            var ctTeam = demo.TeamCT;
+            ctTeam.ScoreFirstHalf = (int)result.CTStartingTeamFirstHalfScore;
+            ctTeam.ScoreSecondHalf = (int)result.CTStartingTeamSecondHalfScore;
+            ctTeam.Name = result.CTStartingTeamName;
+            var tTeam = demo.TeamT;
+            tTeam.ScoreFirstHalf = (int)result.TStartingTeamFirstHalfScore;
+            tTeam.ScoreSecondHalf = (int)result.TStartingTeamSecondHalfScore;
+            tTeam.Name = result.TStartingTeamName;
+
+            demo.Surrender =
+                result.SurrendingTeam == null ? null : (result.SurrendingTeam == 0 ? ctTeam : tTeam);
+            demo.Winner =
+                result.WinningTeam == null ? null : (result.WinningTeam == 0 ? ctTeam : tTeam);
+
 
             if (demo.SourceName != null)
             {
                 demo.Source = Source.Factory(demo.SourceName);
             }
 
+            var demoPlayers = cnn.Query(
+                @"SELECT SteamId, Demo, StartingTeam, Name, KillCount, FlashbangThrownCount, SmokeThrownCount, HeThrownCount, MolotovThrownCount, IncendiaryThrownCount, DecoyThrownCount,
+                 TradeKillCount, BombPlantedCount,BombDefusedCount, BombExplodedCount, CrouchKillCount, JumpKillCount, HitCount,
+                 HeadshotCount, DeathCount, AssistCount, EntryKillCount, MvpCount, TeamKillCount, RoundPlayedCount,
+                 AverageHltvRating, AverageEseaRws, OneKillCount, TwoKillCount, ThreeKillCount, FourKillCount, FiveKillCount
+        FROM PlayerInDemo
+        WHERE Demo = @id", new { id });
+            foreach (var demoPlayer in demoPlayers)
+            {
+                var team = demoPlayer.StartingTeam == 0 ? ctTeam : tTeam;
+                var player = new Player()
+                {
+                    SteamId = demoPlayer.SteamId,
+                    Name = demoPlayer.Name,
+                    TeamName = team.Name,
+                    KillCount = (int)demoPlayer.KillCount,
+                    FlashbangThrownCount = (int)demoPlayer.FlashbangThrownCount,
+                    SmokeThrownCount = (int)demoPlayer.SmokeThrownCount,
+                    HeGrenadeThrownCount = (int)demoPlayer.HeThrownCount,
+                    MolotovThrownCount = (int)demoPlayer.MolotovThrownCount,
+                    IncendiaryThrownCount = (int)demoPlayer.IncendiaryThrownCount,
+                    DecoyThrownCount = (int)demoPlayer.DecoyThrownCount,
+                    TradeKillCount = (int)demoPlayer.TradeKillCount,
+                    BombPlantedCount = (int)demoPlayer.BombPlantedCount,
+                    BombDefusedCount = (int)demoPlayer.BombDefusedCount,
+                    BombExplodedCount = (int)demoPlayer.BombExplodedCount,
+                    CrouchKillCount = (int)demoPlayer.CrouchKillCount,
+                    JumpKillCount = (int)demoPlayer.JumpKillCount,
+                    //WeaponFiredCount      = demoPlayer,
+                    HitCount = (int)demoPlayer.HitCount,
+                    HeadshotCount = (int)demoPlayer.HeadshotCount,
+                    DeathCount = (int)demoPlayer.DeathCount,
+                    AssistCount = (int)demoPlayer.AssistCount,
+                    //EntryKillCount = demoPlayer.EntryKills.Count,
+                    RoundMvpCount = (int)demoPlayer.MvpCount,
+                    //KnifeKillCount        = demoPlayer.Kill,
+                    TeamKillCount = (int)demoPlayer.TeamKillCount,
+                    //TotalDamageHealthCount = demoPlayer.DamageHealthCount,
+                    //TotalDamageArmorCount = demoPlayer.DamageArmorCount,
+
+                    RoundPlayedCount = (int)demoPlayer.RoundPlayedCount,
+                    //AverageHealthDamage = demoPlayer.AverageHealthDamage,
+                    RatingHltv = (float)demoPlayer.AverageHltvRating,
+                    EseaRws = (decimal)demoPlayer.AverageEseaRws,
+                    OneKillCount = (int) demoPlayer.OneKillCount,
+                    TwoKillCount = (int)demoPlayer.TwoKillCount,
+                    ThreeKillCount = (int)demoPlayer.ThreeKillCount,
+                    FourKillCount = (int)demoPlayer.FourKillCount,
+                    FiveKillCount = (int)demoPlayer.FiveKillCount,
+                };
+                team.Players.Add(player);
+
+            }
 
             return demo;
         }
@@ -181,8 +292,8 @@ namespace Database
                 SteamId                             INTEGER not null,
                 Demo                                TEXT not null,
                 StartingTeam                        INTEGER not null, -- 0 -> CT, 1 -> T
+                Name                                TEXT not null, -- Name in Match
                 KillCount                           INTEGER,
-                ClutchCount                         INTEGER,
                 FlashbangThrownCount                INTEGER,
                 SmokeThrownCount                    INTEGER,
                 HeThrownCount                       INTEGER,
@@ -195,30 +306,29 @@ namespace Database
                 BombExplodedCount                   INTEGER,
                 CrouchKillCount                     INTEGER,
                 JumpKillCount                       INTEGER,
-                WeaponFiredCount                    INTEGER,
+                --WeaponFiredCount                    INTEGER,
                 HitCount                            INTEGER,
-                ClutchWonCount                      INTEGER,
-                ClutchLostCount                     INTEGER,
                 HeadshotCount                       INTEGER,
                 DeathCount                          INTEGER,
                 AssistCount                         INTEGER,
                 EntryKillCount                      INTEGER,
                 MvpCount                            INTEGER,
-                KnifeKillCount                      INTEGER,
+                --KnifeKillCount                      INTEGER,
                 TeamKillCount                       INTEGER,
-                DamageHealthCount                   INTEGER,
-                DamageArmorCount                    INTEGER,
-                KillPerRound                        REAL,
-                AssistPerRound                      REAL,
-                DeathPerRound                       REAL,
-                AverageHealthDamage                 REAL,
-                AaverageHltvRating                  REAL,
+                --DamageHealthCount                   INTEGER,
+                --DamageArmorCount                    INTEGER,
+                RoundPlayedCount                    INTEGER,
+                --AverageHealthDamage                 REAL,
+                AverageHltvRating                   REAL,
                 AverageEseaRws                      REAL,
                 OneKillCount                        INTEGER,
                 TwoKillCount                        INTEGER,
                 ThreeKillCount                      INTEGER,
                 FourKillCount                       INTEGER,
                 FiveKillCount                       INTEGER
+                --ClutchCount                         INTEGER,
+                --ClutchWonCount                      INTEGER,
+                --ClutchLostCount                     INTEGER
             );
             CREATE INDEX IF NOT EXISTS idx_demo_steamid 
             ON PlayerInDemo (SteamId);

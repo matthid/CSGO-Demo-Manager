@@ -2,6 +2,7 @@ using Database;
 using NUnit.Framework;
 using Services.Design;
 using System.Threading.Tasks;
+using Core.Models;
 
 namespace DatabaseTests
 {
@@ -18,7 +19,17 @@ namespace DatabaseTests
             var designService = new DemosDesignService();
             var demos = await designService.GetDemosHeader(null);
             var testDemo = demos[0];
-            
+            if (testDemo.TeamT.Players.Count <= 0)
+            {
+                testDemo.TeamT.Players.Add(new Player
+                {
+                    SteamId = 1,
+                    Name = "test_player",
+                    AssistCount = 10,
+                    RoundPlayedCount = 10
+                });
+            }
+
             var repository = new SqLiteDemoRepository();
             // Keep tables alive.
             repository.Init();
@@ -50,6 +61,11 @@ namespace DatabaseTests
             Assert.AreEqual(testDemo.TeamT.Name, loadedDemo.TeamT.Name);
             Assert.AreEqual(testDemo.TeamT.ScoreFirstHalf, loadedDemo.TeamT.ScoreFirstHalf);
             Assert.AreEqual(testDemo.TeamT.ScoreSecondHalf, loadedDemo.TeamT.ScoreSecondHalf);
+            Assert.AreEqual(testDemo.TeamT.Players.Count, loadedDemo.TeamT.Players.Count);
+            if (testDemo.TeamT.Players.Count > 0)
+            {
+                Assert.AreEqual(testDemo.TeamT.Players[0].Name, loadedDemo.TeamT.Players[0].Name);
+            }
         }
     }
 }
