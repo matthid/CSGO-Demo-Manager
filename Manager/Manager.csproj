@@ -175,7 +175,6 @@
     <Compile Include="Converters\StuffTypeToolTipToStringConverter.cs" />
     <Compile Include="Converters\StuffTypeToStringConverter.cs" />
     <Compile Include="Converters\ValveDemoToVisibilityConverter.cs" />
-    <Compile Include="Internals\Extensions.cs" />
     <Compile Include="Internals\MultiSelectComboBox\MultiSelectComboBox.xaml.cs">
       <DependentUpon>MultiSelectComboBox.xaml</DependentUpon>
     </Compile>
