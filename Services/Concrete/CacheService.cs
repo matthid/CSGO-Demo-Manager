@@ -129,7 +129,7 @@ namespace Services.Concrete
                         }
                         catch (IOException e)
                         {
-                            Logger.Instance.Log(new Exception($"Exception while trying to read '{file}'. Consider deleting this file!"));
+                            Logger.Instance.Log(new Exception($"Exception while trying to read '{file}'. Consider deleting this file!", e));
 							continue;
                         }
 						try

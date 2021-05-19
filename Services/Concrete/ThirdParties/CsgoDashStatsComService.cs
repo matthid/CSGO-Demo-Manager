@@ -8,12 +8,12 @@ namespace Services.Concrete.ThirdParties
     class CsgoDashStatsComService : IThirdPartyInterface
     {
 
-        public async Task<ThirdPartyData> SendShareCode(Demo demo, string shareCode)
+        public Task<ThirdPartyData> SendShareCode(Demo demo, string shareCode)
         {
             ThirdPartyData data = new ThirdPartyData { Success = true };
             data.DemoUrl = $"https://csgo-stats.com/match/{shareCode}";
 
-            return data;
+            return Task.FromResult(data);
         }
     }
 }
